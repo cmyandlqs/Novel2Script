@@ -21,11 +21,11 @@
 
 ## 当前开发状态
 
-- 当前阶段：阶段 2：工程骨架与基础运行
+- 当前阶段：阶段 3：章节解析与输入校验
 - 当前状态：待开始
-- 上一阶段：阶段 1：YAML Schema 与输出契约，已完成，PR #1 已合并
-- 下一步入口：阅读 `docs/项目状态.md` 和 `docs/开发计划.md` 的阶段 2
-- 下一步建议分支：`chore/scaffold-web-application`
+- 上一阶段：阶段 2：工程骨架与基础运行，已完成，PR #3 已创建
+- 下一步入口：阅读 `docs/项目状态.md` 和 `docs/开发计划.md` 的阶段 3
+- 下一步建议分支：`feat/chapter-parser`
 
 ## 竞赛硬约束
 
@@ -126,8 +126,15 @@
 
 ```text
 .
+├── README.md         # 项目说明、运行方式、依赖和当前 Demo 状态
+├── package.json      # Next.js Web 应用依赖和 npm scripts
+├── package-lock.json # npm 可复现安装锁文件
 ├── CLAUDE.md        # Claude/AI agent 使用的项目说明与竞赛硬约束
 ├── AGENTS.md        # 通用 AI agent 使用的项目说明与竞赛硬约束
+├── src/
+│   ├── app/          # Next.js App Router 页面和 API route
+│   ├── components/   # 基础工作台 UI 组件
+│   └── lib/          # 阶段 2 基础逻辑
 ├── schemas/
 │   └── script.schema.json       # 剧本 YAML 输出契约，对应赛题 Schema 要求
 ├── examples/
@@ -142,14 +149,13 @@
     └── 技术选型.md              # 项目形态、技术栈、目录结构和选型理由
 ```
 
-后续建议目录按功能拆分，例如：
+后续可能新增目录：
 
 ```text
-frontend/            # 前端应用或交互界面
-backend/             # 后端服务、AI 调用、转换流程
-schemas/             # YAML Schema 定义
-examples/            # 小说输入样例、剧本 YAML 输出样例
-docs/                # 竞赛文档、Schema 设计说明、演示说明
+src/lib/ai/           # AI Provider Adapter 和 mock/真实模型 provider
+src/lib/script/       # YAML 序列化、Schema 校验和剧本结构工具
+src/lib/quality/      # 输出质量评分逻辑
+tests/                # 跨模块测试或端到端测试
 ```
 
 ## Agent 工作要求
