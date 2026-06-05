@@ -8,6 +8,15 @@
 
 核心交付结果必须是 YAML 格式的结构化剧本，并额外提交一份 YAML Schema 定义文档，说明 Schema 的设计原因。
 
+## 仓库信息
+
+- GitHub 仓库：https://github.com/cmyandlqs/Noverl2Script
+- 远程名：`origin`
+- 远程地址：`git@github.com:cmyandlqs/Noverl2Script.git`
+- 主分支：`main`
+- 首次提交：`e04003d docs: add competition constraints`
+- 首次 push 状态：已推送到 `origin/main`
+
 ## 竞赛硬约束
 
 后续所有开发、文档和演示都必须遵守以下要求：
@@ -37,7 +46,7 @@
 
 ## PR 与 Commit 规范
 
-当前目录尚未初始化为 Git 仓库，但竞赛提交必须通过公开 GitHub/Gitee 仓库完成。
+当前目录已初始化为 Git 仓库，并已连接到公开 GitHub 仓库。
 
 开发时必须遵守：
 
