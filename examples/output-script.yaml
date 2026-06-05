@@ -1,0 +1,168 @@
+metadata:
+  title: "雨夜档案"
+  schema_version: "1.0.0"
+  draft_type: "screenplay_draft"
+  language: "zh-CN"
+  genre: "悬疑"
+  target_format: "short_drama"
+
+source:
+  chapter_count: 3
+  chapters:
+    - id: "chapter_001"
+      title: "雨中的包裹"
+      order: 1
+      summary: "林舟在档案馆夜班时收到神秘硬盘，并在监控中看见灰色雨衣人影。"
+      key_events:
+        - "投递箱在午夜前响起。"
+        - "林舟发现写有警告的黑色硬盘。"
+        - "监控出现灰色雨衣人影。"
+    - id: "chapter_002"
+      title: "被删掉的城市"
+      order: 2
+      summary: "林舟和许澄调查硬盘中的照片，发现南桥区相关记录被系统性清除。"
+      key_events:
+        - "硬盘中出现南桥计划和旧钟楼照片。"
+        - "许澄认出南桥区曾因火灾迁走。"
+        - "断电后地图上少了一整块区域。"
+    - id: "chapter_003"
+      title: "钟楼里的名单"
+      order: 3
+      summary: "林舟和许澄找到废弃钟楼，发现失踪居民名单以及林舟的名字。"
+      key_events:
+        - "两人找到废弃钟楼。"
+        - "钟面后藏着失踪居民名单。"
+        - "灰色雨衣人警告他们停止调查。"
+  overall_summary: "档案管理员林舟与馆长许澄追查一块神秘硬盘，发现城市中被抹除的南桥区和一份失踪名单。"
+
+characters:
+  - id: "character_001"
+    name: "林舟"
+    role: "protagonist"
+    description: "旧城区档案馆夜班管理员，谨慎但对异常记录有强烈责任感。"
+    motivation: "查明硬盘和南桥区消失的真相。"
+    arc: "从被动接收线索，转变为愿意承担记忆保留者责任的人。"
+  - id: "character_002"
+    name: "许澄"
+    role: "supporting"
+    description: "档案馆馆长，熟悉城市旧档案，行动果断。"
+    motivation: "保护档案和真实历史不被抹除。"
+    arc: "从谨慎调查到主动保护林舟继续追查。"
+  - id: "character_003"
+    name: "灰色雨衣人"
+    role: "antagonist"
+    description: "身份不明的警告者，总在关键线索出现后现身。"
+    motivation: "阻止林舟和许澄接近南桥区真相。"
+
+locations:
+  - id: "location_001"
+    name: "旧城区档案馆"
+    description: "保存城市旧档案的建筑，夜晚空旷，走廊监控覆盖不完整。"
+  - id: "location_002"
+    name: "档案馆查阅室"
+    description: "摆放电脑、城市地图和纸质档案的房间。"
+  - id: "location_003"
+    name: "废弃钟楼"
+    description: "位于城市边缘的旧钟楼，隐藏南桥区失踪居民名单。"
+
+plot_summary:
+  logline: "档案管理员收到神秘硬盘后，发现一整个城区正从城市记忆中被抹除。"
+  synopsis: "林舟在雨夜收到写有警告的硬盘，并与馆长许澄追查南桥区消失的档案。两人根据旧照片找到废弃钟楼，发现失踪居民名单和林舟自己的名字。"
+  central_conflict: "林舟和许澄试图保存真相，而灰色雨衣人代表的未知力量试图抹除南桥区及相关记忆。"
+  themes:
+    - "记忆与遗忘"
+    - "城市档案"
+    - "个人责任"
+
+scenes:
+  - id: "scene_001"
+    title: "午夜投递箱"
+    chapter_source:
+      - "chapter_001"
+    location_id: "location_001"
+    time_of_day: "深夜"
+    characters:
+      - "character_001"
+    summary: "林舟在暴雨夜收到一块神秘硬盘。"
+    dramatic_purpose: "建立悬疑事件，并把主角卷入南桥区谜团。"
+    beats:
+      - type: "action"
+        content: "暴雨敲打档案馆玻璃，林舟独自坐在值班台前整理借阅记录。"
+        source_ref:
+          - "chapter_001"
+      - type: "action"
+        content: "门口投递箱突然发出金属碰撞声，林舟停下手里的笔。"
+      - type: "action"
+        content: "他从投递箱底部取出油纸包，拆开后露出一块黑色硬盘和一张便签。"
+      - type: "narration"
+        content: "便签上写着：三天后，所有人都会忘记这座城的名字。"
+      - type: "action"
+        content: "林舟抬头看向监控屏幕，走廊尽头闪过一个灰色雨衣人影。"
+
+  - id: "scene_002"
+    title: "消失的南桥区"
+    chapter_source:
+      - "chapter_002"
+    location_id: "location_002"
+    time_of_day: "清晨"
+    characters:
+      - "character_001"
+      - "character_002"
+    summary: "林舟和许澄发现照片里的南桥区记录被清理。"
+    dramatic_purpose: "扩大谜团，让个人遭遇升级为城市记忆被抹除的危机。"
+    beats:
+      - type: "action"
+        content: "电脑屏幕上弹出“南桥计划”文件夹，十七张旧照片依次铺开。"
+      - type: "dialogue"
+        speaker_id: "character_001"
+        content: "这些照片里的钟楼，馆里为什么一点记录都没有？"
+        emotion: "疑惑"
+      - type: "dialogue"
+        speaker_id: "character_002"
+        content: "这是南桥区。十五年前那里发生过火灾，可不该连索引都消失。"
+        emotion: "紧张"
+      - type: "action"
+        content: "灯光骤然熄灭，备用灯亮起时，墙上的城市地图缺了一整块。"
+      - type: "action"
+        content: "许澄伸手按住地图边缘，指尖停在被挖空的位置。"
+
+  - id: "scene_003"
+    title: "名单上的名字"
+    chapter_source:
+      - "chapter_003"
+    location_id: "location_003"
+    time_of_day: "傍晚"
+    characters:
+      - "character_001"
+      - "character_002"
+      - "character_003"
+    summary: "林舟和许澄在钟楼中发现失踪名单和林舟的身份标注。"
+    dramatic_purpose: "揭示主角与谜团的直接关系，并制造下一步追查的冲突。"
+    beats:
+      - type: "action"
+        content: "林舟推开钟楼木门，楼梯上还残留着新鲜泥水脚印。"
+      - type: "action"
+        content: "塔顶旧钟停在零点零三分，许澄从钟面后抽出一本发黄的名单。"
+      - type: "dialogue"
+        speaker_id: "character_001"
+        content: "这些名字，都是失踪居民？"
+        emotion: "震惊"
+      - type: "action"
+        content: "林舟翻到最后一页，看见自己的名字被铅笔圈起，旁边写着“记忆保留者”。"
+      - type: "dialogue"
+        speaker_id: "character_003"
+        content: "现在停下，你们还来得及忘记。"
+        emotion: "冷静"
+      - type: "dialogue"
+        speaker_id: "character_002"
+        content: "如果所有记录都被抹掉，至少还要有人记得真相。"
+        emotion: "坚定"
+      - type: "transition"
+        content: "钟楼重新响起，远处城市的灯一盏接一盏熄灭。"
+
+adaptation_notes:
+  - type: "schema_note"
+    content: "本示例将小说心理悬疑叙事拆分为三个主要剧本场景，每个场景保留来源章节引用。"
+  - type: "editorial_suggestion"
+    related_scene_id: "scene_003"
+    content: "后续可补充灰色雨衣人的身份线索，以增强短剧连续追看动力。"

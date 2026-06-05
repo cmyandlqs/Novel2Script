@@ -1,0 +1,384 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cmyandlqs/Noverl2Script/schemas/script.schema.json",
+  "title": "Noverl2Script YAML Script Schema",
+  "description": "Schema for an editable YAML screenplay draft generated from three or more novel chapters.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metadata",
+    "source",
+    "characters",
+    "locations",
+    "plot_summary",
+    "scenes"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "schema_version",
+        "draft_type",
+        "language"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schema_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "draft_type": {
+          "type": "string",
+          "enum": [
+            "screenplay_draft"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "minLength": 2
+        },
+        "genre": {
+          "type": "string"
+        },
+        "target_format": {
+          "type": "string",
+          "enum": [
+            "film",
+            "short_drama",
+            "stage_play",
+            "web_series",
+            "unspecified"
+          ],
+          "default": "unspecified"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chapter_count",
+        "chapters"
+      ],
+      "properties": {
+        "chapter_count": {
+          "type": "integer",
+          "minimum": 3
+        },
+        "chapters": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/chapter"
+          }
+        },
+        "overall_summary": {
+          "type": "string"
+        }
+      }
+    },
+    "characters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/character"
+      }
+    },
+    "locations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/location"
+      }
+    },
+    "plot_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logline",
+        "synopsis",
+        "central_conflict"
+      ],
+      "properties": {
+        "logline": {
+          "type": "string",
+          "minLength": 1
+        },
+        "synopsis": {
+          "type": "string",
+          "minLength": 1
+        },
+        "central_conflict": {
+          "type": "string",
+          "minLength": 1
+        },
+        "themes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/scene"
+      }
+    },
+    "adaptation_notes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/adaptation_note"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z]+_[0-9]{3}$"
+    },
+    "chapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "order",
+        "summary"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key_events": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "character": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "role",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "protagonist",
+            "antagonist",
+            "supporting",
+            "minor",
+            "unknown"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "motivation": {
+          "type": "string"
+        },
+        "arc": {
+          "type": "string"
+        }
+      }
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "chapter_source",
+        "location_id",
+        "time_of_day",
+        "characters",
+        "summary",
+        "dramatic_purpose",
+        "beats"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "chapter_source": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "location_id": {
+          "$ref": "#/$defs/id"
+        },
+        "time_of_day": {
+          "type": "string",
+          "minLength": 1
+        },
+        "characters": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dramatic_purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "beats": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/beat"
+          }
+        }
+      }
+    },
+    "beat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "content"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "action",
+            "dialogue",
+            "narration",
+            "transition"
+          ]
+        },
+        "speaker_id": {
+          "$ref": "#/$defs/id"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1
+        },
+        "emotion": {
+          "type": "string"
+        },
+        "source_ref": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "dialogue"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "speaker_id"
+            ]
+          }
+        }
+      ]
+    },
+    "adaptation_note": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "content"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "assumption",
+            "uncertainty",
+            "editorial_suggestion",
+            "schema_note"
+          ]
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1
+        },
+        "related_scene_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    }
+  }
+}

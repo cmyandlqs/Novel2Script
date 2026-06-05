@@ -120,7 +120,13 @@
 .
 ├── CLAUDE.md        # Claude/AI agent 使用的项目说明与竞赛硬约束
 ├── AGENTS.md        # 通用 AI agent 使用的项目说明与竞赛硬约束
+├── schemas/
+│   └── script.schema.json       # 剧本 YAML 输出契约，对应赛题 Schema 要求
+├── examples/
+│   ├── sample-novel.md          # 原创 3 章节小说输入样例
+│   └── output-script.yaml       # 符合 Schema 的剧本 YAML 输出样例
 └── docs/
+    ├── YAML_Schema设计说明.md   # Schema 字段设计原因与边界说明
     ├── 竞赛文档.md              # 赛题信息、评审规则、提交要求和硬约束整理
     ├── 输出与Agent评估标准.md   # 输出质量、Agent 能力和 Demo 验收评估标准
     ├── 开发计划.md              # 分阶段开发计划、验收标准和注意事项
@@ -132,7 +138,7 @@
 ```text
 frontend/            # 前端应用或交互界面
 backend/             # 后端服务、AI 调用、转换流程
-schemas/             # YAML Schema 定义与示例
+schemas/             # YAML Schema 定义
 examples/            # 小说输入样例、剧本 YAML 输出样例
 docs/                # 竞赛文档、Schema 设计说明、演示说明
 ```
