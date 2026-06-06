@@ -1,6 +1,11 @@
 import type { ParsedChapter } from "@/lib/chapters/parseChapters";
 import type { GenerationProvider } from "./provider";
 import type {
+  ScriptCharacter,
+  ScriptLocation,
+  ScriptPlotSummary,
+  ScriptScene,
+  AdaptationNote,
   ScriptDraft,
   PipelineResult,
   PipelineStepName,
@@ -17,7 +22,7 @@ const stepLabels: Record<PipelineStepName, string> = {
 };
 
 type StepOutcome<T> = {
-  result: T;
+  result: T | undefined;
   stepResult: PipelineStepResult;
 };
 
@@ -39,7 +44,7 @@ async function runStep<T>(
     };
   } catch (error) {
     return {
-      result: undefined as T,
+      result: undefined,
       stepResult: {
         step,
         label: stepLabels[step],
@@ -51,12 +56,20 @@ async function runStep<T>(
   }
 }
 
+/** Default fallback values when a pipeline step fails */
+const defaultPlotSummary: ScriptPlotSummary = {
+  logline: "",
+  synopsis: "",
+  central_conflict: "",
+};
+
 export async function runPipeline(
   provider: GenerationProvider,
   chapters: ParsedChapter[],
   title = "未命名作品",
 ): Promise<PipelineResult> {
   const steps: PipelineStepResult[] = [];
+  const hasError = () => steps.some((s) => s.status === "error");
 
   const { result: scriptChapters, stepResult: s1 } = await runStep(
     "summarize",
@@ -64,34 +77,39 @@ export async function runPipeline(
   );
   steps.push(s1);
 
-  const { result: characters, stepResult: s2 } = await runStep(
-    "extract_characters",
-    () => provider.extractCharacters(chapters),
-  );
+  const { result: characters, stepResult: s2 } = hasError()
+    ? { result: undefined as ScriptCharacter[] | undefined, stepResult: { step: "extract_characters" as PipelineStepName, label: stepLabels.extract_characters, status: "error" as const, duration_ms: 0, error: "前置步骤失败，跳过" } }
+    : await runStep("extract_characters", () =>
+        provider.extractCharacters(chapters),
+      );
   steps.push(s2);
 
-  const { result: locations, stepResult: s3 } = await runStep(
-    "extract_locations",
-    () => provider.extractLocations(chapters),
-  );
+  const { result: locations, stepResult: s3 } = hasError()
+    ? { result: undefined as ScriptLocation[] | undefined, stepResult: { step: "extract_locations" as PipelineStepName, label: stepLabels.extract_locations, status: "error" as const, duration_ms: 0, error: "前置步骤失败，跳过" } }
+    : await runStep("extract_locations", () =>
+        provider.extractLocations(chapters),
+      );
   steps.push(s3);
 
-  const { result: plotSummary, stepResult: s4 } = await runStep(
-    "plot_summary",
-    () => provider.generatePlotSummary(chapters, characters),
-  );
+  const { result: plotSummary, stepResult: s4 } = hasError()
+    ? { result: undefined as ScriptPlotSummary | undefined, stepResult: { step: "plot_summary" as PipelineStepName, label: stepLabels.plot_summary, status: "error" as const, duration_ms: 0, error: "前置步骤失败，跳过" } }
+    : await runStep("plot_summary", () =>
+        provider.generatePlotSummary(chapters, characters ?? []),
+      );
   steps.push(s4);
 
-  const { result: scenes, stepResult: s5 } = await runStep(
-    "split_scenes",
-    () => provider.splitScenes(chapters, characters, locations),
-  );
+  const { result: scenes, stepResult: s5 } = hasError()
+    ? { result: undefined as ScriptScene[] | undefined, stepResult: { step: "split_scenes" as PipelineStepName, label: stepLabels.split_scenes, status: "error" as const, duration_ms: 0, error: "前置步骤失败，跳过" } }
+    : await runStep("split_scenes", () =>
+        provider.splitScenes(chapters, characters ?? [], locations ?? []),
+      );
   steps.push(s5);
 
-  const { result: adaptationNotes, stepResult: s6 } = await runStep(
-    "adaptation_notes",
-    () => provider.generateAdaptationNotes(chapters, scenes),
-  );
+  const { result: adaptationNotes, stepResult: s6 } = hasError()
+    ? { result: undefined as AdaptationNote[] | undefined, stepResult: { step: "adaptation_notes" as PipelineStepName, label: stepLabels.adaptation_notes, status: "error" as const, duration_ms: 0, error: "前置步骤失败，跳过" } }
+    : await runStep("adaptation_notes", () =>
+        provider.generateAdaptationNotes(chapters, scenes ?? []),
+      );
   steps.push(s6);
 
   const draft: ScriptDraft = {
@@ -103,12 +121,17 @@ export async function runPipeline(
     },
     source: {
       chapter_count: chapters.length,
-      chapters: scriptChapters,
+      chapters: scriptChapters ?? chapters.map((ch) => ({
+        id: ch.id,
+        title: ch.title,
+        order: ch.order,
+        summary: "",
+      })),
     },
-    characters,
-    locations,
-    plot_summary: plotSummary,
-    scenes,
+    characters: characters ?? [],
+    locations: locations ?? [],
+    plot_summary: plotSummary ?? defaultPlotSummary,
+    scenes: scenes ?? [],
     adaptation_notes: adaptationNotes,
   };
 
