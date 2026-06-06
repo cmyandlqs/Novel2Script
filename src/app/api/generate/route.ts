@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { parseChapters } from "@/lib/chapters/parseChapters";
 import { MockProvider } from "@/lib/ai/mockProvider";
+import { OpenAIProvider } from "@/lib/ai/openaiProvider";
 import { runPipeline } from "@/lib/ai/pipeline";
+import type { GenerationProvider } from "@/lib/ai/provider";
+
+function createProvider(): GenerationProvider {
+  if (process.env.OPENAI_API_KEY) {
+    return new OpenAIProvider();
+  }
+  return new MockProvider();
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -35,7 +44,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const provider = new MockProvider();
+    const provider = createProvider();
     const result = await runPipeline(
       provider,
       parseResult.chapters,
