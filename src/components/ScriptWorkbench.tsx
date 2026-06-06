@@ -9,10 +9,13 @@ import {
   Play,
   Users,
   Film,
+  ShieldCheck,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { parseChapters } from "@/lib/chapters/parseChapters";
 import type { PipelineResult } from "@/lib/ai/types";
+import type { DraftValidationResult } from "@/lib/validation/validateDraft";
+import type { QualityScore } from "@/lib/validation/scoreDraft";
 import YAML from "yaml";
 
 const fallbackNovel = `# 《雨夜档案》
@@ -36,6 +39,9 @@ export function ScriptWorkbench() {
   const [scriptYaml, setScriptYaml] = useState("");
   const [status, setStatus] = useState("就绪，点击生成初稿开始");
   const [isLoading, setIsLoading] = useState(false);
+  const [validationResult, setValidationResult] =
+    useState<DraftValidationResult | null>(null);
+  const [qualityScore, setQualityScore] = useState<QualityScore | null>(null);
 
   const chapterResult = useMemo(() => parseChapters(novelText), [novelText]);
   const chapters = chapterResult.chapters;
@@ -57,6 +63,8 @@ export function ScriptWorkbench() {
       setNovelText(data.novel);
       setScriptYaml(data.scriptYaml);
       setPipelineResult(null);
+      setValidationResult(null);
+      setQualityScore(null);
       setStatus("已加载原创三章样例");
     } catch {
       setStatus("示例接口不可用，已保留本地兜底内容");
@@ -65,11 +73,32 @@ export function ScriptWorkbench() {
     }
   }
 
+  async function runValidation(yaml: string) {
+    try {
+      const response = await fetch("/api/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ yamlText: yaml }),
+      });
+      const data = (await response.json()) as {
+        validation: DraftValidationResult;
+        qualityScore: QualityScore | null;
+      };
+      setValidationResult(data.validation);
+      setQualityScore(data.qualityScore);
+    } catch {
+      setValidationResult(null);
+      setQualityScore(null);
+    }
+  }
+
   async function generateDraft() {
     if (!chapterReady) return;
 
     setIsLoading(true);
     setPipelineResult(null);
+    setValidationResult(null);
+    setQualityScore(null);
     setStatus("正在生成剧本初稿...");
 
     try {
@@ -91,14 +120,18 @@ export function ScriptWorkbench() {
 
       const result = data as PipelineResult;
       setPipelineResult(result);
-      setScriptYaml(YAML.stringify(result.draft, { lineWidth: 0 }));
+      const yaml = YAML.stringify(result.draft, { lineWidth: 0 });
+      setScriptYaml(yaml);
 
       const hasError = result.steps.some((s) => s.status === "error");
       if (hasError) {
         setStatus("部分步骤出错，请查看下方步骤详情");
       } else {
-        setStatus("剧本初稿生成完成");
+        setStatus("剧本初稿生成完成，正在校验...");
       }
+
+      await runValidation(yaml);
+      setStatus("剧本初稿生成并校验完成");
     } catch {
       setStatus("网络错误，请检查开发服务器是否在运行。");
     } finally {
@@ -321,7 +354,7 @@ export function ScriptWorkbench() {
           </div>
         </section>
 
-        {/* Right: YAML Output */}
+        {/* Right: YAML Output + Validation + Scoring */}
         <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
             <div>
@@ -351,9 +384,111 @@ export function ScriptWorkbench() {
               </button>
             </div>
           </div>
-          <pre className="h-[calc(100vh-13rem)] min-h-[28rem] overflow-auto p-4 text-xs leading-5 text-[var(--foreground)]">
-            <code>{scriptYaml}</code>
-          </pre>
+          <div className="p-4">
+            <pre className="h-64 min-h-[10rem] overflow-auto text-xs leading-5 text-[var(--foreground)]">
+              <code>{scriptYaml}</code>
+            </pre>
+
+            {/* Validation Results */}
+            {validationResult && (
+              <div className="mt-4 space-y-3">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  校验结果
+                </h3>
+                <div
+                  className={`rounded-md border px-3 py-2 text-sm ${
+                    validationResult.valid
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-red-200 bg-red-50 text-red-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 font-medium">
+                    {validationResult.valid ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <span className="inline-block h-4 w-4 rounded-full bg-red-400" />
+                    )}
+                    {validationResult.valid
+                      ? "全部校验通过"
+                      : `发现 ${validationResult.items.length} 个问题`}
+                  </div>
+                  <div className="mt-1 flex gap-3 text-xs">
+                    <span>YAML: {validationResult.yamlValid ? "✓" : "✗"}</span>
+                    <span>Schema: {validationResult.schemaValid ? "✓" : "✗"}</span>
+                  </div>
+                </div>
+                {validationResult.items.length > 0 && (
+                  <ul className="space-y-1 text-xs text-[var(--muted)]">
+                    {validationResult.items.map((item, i) => (
+                      <li
+                        className={`rounded border px-2 py-1.5 ${
+                          item.severity === "error"
+                            ? "border-red-200 bg-red-50"
+                            : "border-amber-200 bg-amber-50"
+                        }`}
+                        key={i}
+                      >
+                        <span className="font-mono text-[10px]">{item.path}</span>
+                        <span className="ml-2">{item.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* Quality Score */}
+            {qualityScore && (
+              <div className="mt-4 space-y-3">
+                <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+                  质量评分
+                </h3>
+                <div className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2">
+                  <div className="flex items-baseline gap-2 text-lg font-semibold">
+                    <span>{qualityScore.totalScore}</span>
+                    <span className="text-sm font-normal text-[var(--muted)]">
+                      / {qualityScore.totalMax}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
+                    <div
+                      className="h-2 rounded-full bg-emerald-500"
+                      style={{
+                        width: `${(qualityScore.totalScore / qualityScore.totalMax) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                {qualityScore.dimensions.map((dim) => (
+                  <div
+                    className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
+                    key={dim.name}
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{dim.name}</span>
+                      <span className="text-xs text-[var(--muted)]">
+                        {dim.score} / {dim.maxScore}
+                      </span>
+                    </div>
+                    <div className="mt-1 space-y-0.5">
+                      {dim.checks.map((check) => (
+                        <div
+                          className="flex items-center gap-1.5 text-xs text-[var(--muted)]"
+                          key={check.label}
+                        >
+                          <span className={check.passed ? "text-emerald-500" : "text-red-400"}>
+                            {check.passed ? "✓" : "✗"}
+                          </span>
+                          {check.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       </section>
     </main>

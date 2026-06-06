@@ -4,7 +4,7 @@ AI 小说转剧本工具。项目面向小说作者，目标是把 3 个章节�
 
 ## 当前状态
 
-当前处于阶段 4：多阶段 Agent Pipeline（Mock + OpenAI Provider 已完成）。
+当前处于阶段 5：YAML 校验与质量评分。
 
 已具备：
 
@@ -15,8 +15,10 @@ AI 小说转剧本工具。项目面向小说作者，目标是把 3 个章节�
 - 多阶段生成 Pipeline（章节摘要 → 人物抽取 → 地点抽取 → 场景拆分 → YAML 输出）。
 - Mock Provider（无需 API Key 即可演示）和 OpenAI 兼容 Provider（配置 API Key 后使用真实模型）。
 - 页面展示 Pipeline 步骤、人物表和场景列表等中间产物。
+- YAML 解析校验、Schema 校验（AJV）、业务规则校验（引用一致性、章节覆盖）。
+- 质量评分面板（赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
 
-后续阶段会实现 Schema 校验面板和结构化编辑工作台。
+后续阶段会实现可编辑剧本工作台。
 
 ## 快速开始
 
@@ -45,10 +47,11 @@ http://localhost:3000
 ## 关键目录
 
 ```text
-src/app/                 # Next.js App Router 页面与 API（含 /api/generate）
+src/app/                 # Next.js App Router 页面与 API（含 /api/generate、/api/validate）
 src/components/          # 工作台 UI 组件
 src/lib/chapters/        # 章节解析与 3+ 章节输入校验
 src/lib/ai/              # AI Provider 接口、Mock Provider 和 Pipeline 编排
+src/lib/validation/      # YAML 校验、Schema 校验和质量评分
 schemas/                 # 剧本 YAML Schema
 examples/                # 原创小说输入样例和 YAML 输出样例
 docs/                    # 竞赛文档、开发计划、技术选型和项目状态
@@ -85,7 +88,7 @@ OPENAI_MODEL=gpt-4o-mini     # 可选，默认 gpt-4o-mini
 
 - `next`、`react`、`react-dom`：Web 应用和 UI。
 - `yaml`：YAML 序列化，将 Pipeline 生成的剧本对象输出为 YAML 文本。
-- `ajv`：后续用于 JSON Schema 校验。
+- `ajv`：JSON Schema draft 2020-12 校验，用于验证生成结果是否符合 Schema。
 - `openai`：OpenAI 兼容 Provider，通过环境变量配置 API Key 后使用真实模型生成。
 - `lucide-react`：工具按钮图标。
 
@@ -106,7 +109,9 @@ OPENAI_MODEL=gpt-4o-mini     # 可选，默认 gpt-4o-mini
 - 对应的结构化 YAML 剧本样例。
 - 章节解析模块（支持中文/英文章节标题格式）。
 - 多阶段生成 Pipeline 架构（GenerationProvider 接口 + MockProvider + OpenAIProvider）。
-- 面向小说转剧本流程的工作台页面（含 Pipeline 步骤展示和中间产物）。
+- YAML 校验模块（语法校验 + Schema 校验 + 业务规则校验）。
+- 质量评分面板（5 个维度：赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
+- 面向小说转剧本流程的工作台页面（含 Pipeline 步骤展示、中间产物、校验结果和评分）。
 
 ## Demo 视频
 
