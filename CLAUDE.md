@@ -22,10 +22,10 @@
 ## 当前开发状态
 
 - 当前阶段：阶段 4：多阶段 Agent Pipeline
-- 当前状态：Mock Pipeline 已实现，PR 待创建
+- 当前状态：OpenAI Provider 已实现，PR 待创建
 - 上一阶段：阶段 3：章节解析与输入校验，已完成，PR #4
-- 下一步入口：合并阶段 4 Mock Pipeline PR 后实现 OpenAI Provider
-- 下一步建议分支：`feat/openai-provider`
+- 下一步入口：合并阶段 4 PR 后进入阶段 5：YAML 校验与质量评分
+- 下一步建议分支：`feat/yaml-validation-scoring`
 
 ## 竞赛硬约束
 
