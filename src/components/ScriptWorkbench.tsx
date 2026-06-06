@@ -10,10 +10,11 @@ import {
   Users,
   Film,
   ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { parseChapters } from "@/lib/chapters/parseChapters";
-import type { PipelineResult } from "@/lib/ai/types";
+import type { PipelineResult, ScriptDraft } from "@/lib/ai/types";
 import type { DraftValidationResult } from "@/lib/validation/validateDraft";
 import type { QualityScore } from "@/lib/validation/scoreDraft";
 import YAML from "yaml";
@@ -36,6 +37,7 @@ export function ScriptWorkbench() {
   const [novelText, setNovelText] = useState(fallbackNovel);
   const [pipelineResult, setPipelineResult] =
     useState<PipelineResult | null>(null);
+  const [editableDraft, setEditableDraft] = useState<ScriptDraft | null>(null);
   const [scriptYaml, setScriptYaml] = useState("");
   const [status, setStatus] = useState("就绪，点击生成初稿开始");
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +48,11 @@ export function ScriptWorkbench() {
   const chapterResult = useMemo(() => parseChapters(novelText), [novelText]);
   const chapters = chapterResult.chapters;
   const chapterReady = chapterResult.isValid;
+
+  function syncDraftAndYaml(draft: ScriptDraft) {
+    setEditableDraft(draft);
+    setScriptYaml(YAML.stringify(draft, { lineWidth: 0 }));
+  }
 
   async function loadExample() {
     setIsLoading(true);
@@ -63,6 +70,7 @@ export function ScriptWorkbench() {
       setNovelText(data.novel);
       setScriptYaml(data.scriptYaml);
       setPipelineResult(null);
+      setEditableDraft(null);
       setValidationResult(null);
       setQualityScore(null);
       setStatus("已加载原创三章样例");
@@ -97,6 +105,7 @@ export function ScriptWorkbench() {
 
     setIsLoading(true);
     setPipelineResult(null);
+    setEditableDraft(null);
     setValidationResult(null);
     setQualityScore(null);
     setStatus("正在生成剧本初稿...");
@@ -120,8 +129,7 @@ export function ScriptWorkbench() {
 
       const result = data as PipelineResult;
       setPipelineResult(result);
-      const yaml = YAML.stringify(result.draft, { lineWidth: 0 });
-      setScriptYaml(yaml);
+      syncDraftAndYaml(result.draft);
 
       const hasError = result.steps.some((s) => s.status === "error");
       if (hasError) {
@@ -130,6 +138,7 @@ export function ScriptWorkbench() {
         setStatus("剧本初稿生成完成，正在校验...");
       }
 
+      const yaml = YAML.stringify(result.draft, { lineWidth: 0 });
       await runValidation(yaml);
       setStatus("剧本初稿生成并校验完成");
     } catch {
@@ -153,6 +162,66 @@ export function ScriptWorkbench() {
     anchor.click();
     URL.revokeObjectURL(url);
     setStatus("YAML 已下载");
+  }
+
+  async function revalidate() {
+    if (!scriptYaml) return;
+    setIsLoading(true);
+    setStatus("正在重新校验...");
+    await runValidation(scriptYaml);
+    setStatus("校验完成");
+    setIsLoading(false);
+  }
+
+  // --- Edit handlers ---
+
+  function updateCharacterField(
+    id: string,
+    field: "name" | "description",
+    value: string,
+  ) {
+    if (!editableDraft) return;
+    const draft = {
+      ...editableDraft,
+      characters: editableDraft.characters.map((c) =>
+        c.id === id ? { ...c, [field]: value } : c,
+      ),
+    };
+    syncDraftAndYaml(draft);
+  }
+
+  function updateSceneField(
+    id: string,
+    field: "title" | "summary" | "time_of_day",
+    value: string,
+  ) {
+    if (!editableDraft) return;
+    const draft = {
+      ...editableDraft,
+      scenes: editableDraft.scenes.map((s) =>
+        s.id === id ? { ...s, [field]: value } : s,
+      ),
+    };
+    syncDraftAndYaml(draft);
+  }
+
+  function updateBeatContent(
+    sceneId: string,
+    beatIndex: number,
+    content: string,
+  ) {
+    if (!editableDraft) return;
+    const draft = {
+      ...editableDraft,
+      scenes: editableDraft.scenes.map((s) => {
+        if (s.id !== sceneId) return s;
+        const beats = s.beats.map((b, i) =>
+          i === beatIndex ? { ...b, content } : b,
+        );
+        return { ...s, beats };
+      }),
+    };
+    syncDraftAndYaml(draft);
   }
 
   const roleLabel: Record<string, string> = {
@@ -222,16 +291,16 @@ export function ScriptWorkbench() {
           />
         </section>
 
-        {/* Middle: Chapters + Pipeline Results */}
+        {/* Middle: Chapters + Pipeline + Editable Draft */}
         <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
           <div className="border-b border-[var(--border)] px-4 py-3">
-            <h2 className="text-sm font-semibold">章节解析与生成状态</h2>
+            <h2 className="text-sm font-semibold">章节解析与编辑</h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
-              章节列表、Pipeline 步骤与中间产物
+              章节列表、Pipeline 步骤与可编辑剧本
             </p>
           </div>
           <div className="space-y-4 p-4">
-            {/* Validation Status */}
+            {/* Input Validation */}
             <div
               className={`rounded-md border px-3 py-3 text-sm ${
                 chapterReady
@@ -295,58 +364,129 @@ export function ScriptWorkbench() {
               </div>
             )}
 
-            {/* Characters */}
-            {pipelineResult?.draft.characters && (
+            {/* Editable Characters */}
+            {editableDraft && (
               <div className="space-y-2">
                 <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
                   <Users className="h-3.5 w-3.5" />
-                  人物
+                  人物（可编辑）
                 </h3>
-                {pipelineResult.draft.characters.map((ch) => (
+                {editableDraft.characters.map((ch) => (
                   <article
-                    className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
+                    className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
                     key={ch.id}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium">{ch.name}</span>
+                      <input
+                        aria-label="人物名称"
+                        className="flex-1 rounded border border-[var(--border)] bg-white px-2 py-1 text-sm font-medium outline-none focus:border-[var(--accent)]"
+                        onChange={(e) =>
+                          updateCharacterField(ch.id, "name", e.target.value)
+                        }
+                        type="text"
+                        value={ch.name}
+                      />
                       <span className="shrink-0 rounded bg-white px-2 py-0.5 text-xs text-[var(--muted)]">
                         {roleLabel[ch.role] ?? ch.role}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[var(--muted)]">
-                      {ch.description}
-                    </p>
+                    <textarea
+                      aria-label="人物描述"
+                      className="w-full resize-none rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
+                      onChange={(e) =>
+                        updateCharacterField(
+                          ch.id,
+                          "description",
+                          e.target.value,
+                        )
+                      }
+                      rows={2}
+                      value={ch.description}
+                    />
                   </article>
                 ))}
               </div>
             )}
 
-            {/* Scenes */}
-            {pipelineResult?.draft.scenes && (
+            {/* Editable Scenes with Beats */}
+            {editableDraft && (
               <div className="space-y-2">
                 <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
                   <Film className="h-3.5 w-3.5" />
-                  场景
+                  场景（可编辑）
                 </h3>
-                {pipelineResult.draft.scenes.map((scene) => (
+                {editableDraft.scenes.map((scene) => (
                   <article
-                    className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
+                    className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
                     key={scene.id}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium">
-                        {scene.title}
-                      </span>
-                      <span className="shrink-0 rounded bg-white px-2 py-0.5 text-xs text-[var(--muted)]">
-                        {scene.time_of_day}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        aria-label="场景标题"
+                        className="flex-1 rounded border border-[var(--border)] bg-white px-2 py-1 text-sm font-medium outline-none focus:border-[var(--accent)]"
+                        onChange={(e) =>
+                          updateSceneField(scene.id, "title", e.target.value)
+                        }
+                        type="text"
+                        value={scene.title}
+                      />
+                      <input
+                        aria-label="时间段"
+                        className="w-20 shrink-0 rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
+                        onChange={(e) =>
+                          updateSceneField(
+                            scene.id,
+                            "time_of_day",
+                            e.target.value,
+                          )
+                        }
+                        type="text"
+                        value={scene.time_of_day}
+                      />
                     </div>
-                    <p className="mt-1 text-xs text-[var(--muted)]">
-                      {scene.summary}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">
-                      {scene.beats.length} 个 beat
-                    </p>
+                    <textarea
+                      aria-label="场景摘要"
+                      className="w-full resize-none rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
+                      onChange={(e) =>
+                        updateSceneField(scene.id, "summary", e.target.value)
+                      }
+                      rows={2}
+                      value={scene.summary}
+                    />
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wide">
+                        Beats
+                      </p>
+                      {scene.beats.map((beat, bi) => (
+                        <div
+                          className="flex items-start gap-1.5"
+                          key={`${scene.id}-beat-${bi}`}
+                        >
+                          <span className="mt-1 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-[var(--muted)]">
+                            {beat.type === "dialogue"
+                              ? "对白"
+                              : beat.type === "action"
+                                ? "动作"
+                                : beat.type === "narration"
+                                  ? "旁白"
+                                  : "转场"}
+                          </span>
+                          <textarea
+                            aria-label={`beat ${bi + 1}`}
+                            className="flex-1 resize-none rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
+                            onChange={(e) =>
+                              updateBeatContent(
+                                scene.id,
+                                bi,
+                                e.target.value,
+                              )
+                            }
+                            rows={beat.content.length > 30 ? 2 : 1}
+                            value={beat.content}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </article>
                 ))}
               </div>
@@ -354,7 +494,7 @@ export function ScriptWorkbench() {
           </div>
         </section>
 
-        {/* Right: YAML Output + Validation + Scoring */}
+        {/* Right: YAML + Validation + Scoring */}
         <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
             <div>
@@ -364,6 +504,18 @@ export function ScriptWorkbench() {
               </p>
             </div>
             <div className="flex gap-2">
+              {editableDraft && (
+                <button
+                  aria-label="重新校验"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border)] hover:bg-[var(--surface-alt)]"
+                  disabled={isLoading}
+                  onClick={revalidate}
+                  title="重新校验"
+                  type="button"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              )}
               <button
                 aria-label="复制 YAML"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border)] hover:bg-[var(--surface-alt)]"
@@ -415,7 +567,9 @@ export function ScriptWorkbench() {
                   </div>
                   <div className="mt-1 flex gap-3 text-xs">
                     <span>YAML: {validationResult.yamlValid ? "✓" : "✗"}</span>
-                    <span>Schema: {validationResult.schemaValid ? "✓" : "✗"}</span>
+                    <span>
+                      Schema: {validationResult.schemaValid ? "✓" : "✗"}
+                    </span>
                   </div>
                 </div>
                 {validationResult.items.length > 0 && (
@@ -429,7 +583,9 @@ export function ScriptWorkbench() {
                         }`}
                         key={i}
                       >
-                        <span className="font-mono text-[10px]">{item.path}</span>
+                        <span className="font-mono text-[10px]">
+                          {item.path}
+                        </span>
                         <span className="ml-2">{item.message}</span>
                       </li>
                     ))}
@@ -477,7 +633,11 @@ export function ScriptWorkbench() {
                           className="flex items-center gap-1.5 text-xs text-[var(--muted)]"
                           key={check.label}
                         >
-                          <span className={check.passed ? "text-emerald-500" : "text-red-400"}>
+                          <span
+                            className={
+                              check.passed ? "text-emerald-500" : "text-red-400"
+                            }
+                          >
                             {check.passed ? "✓" : "✗"}
                           </span>
                           {check.label}
