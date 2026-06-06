@@ -4,16 +4,18 @@ AI 小说转剧本工具。项目面向小说作者，目标是把 3 个章节�
 
 ## 当前状态
 
-当前处于阶段 2：工程骨架与基础运行。
+当前处于阶段 4：多阶段 Agent Pipeline（Mock Pipeline 已完成）。
 
 已具备：
 
 - Next.js + TypeScript + Tailwind Web 工程骨架。
 - 原创 3 章节小说样例。
 - YAML 剧本输出 Schema。
-- mock YAML 输出页面。
+- 章节解析与 3+ 章节输入校验。
+- Mock 多阶段生成 Pipeline（章节摘要 → 人物抽取 → 地点抽取 → 场景拆分 → YAML 输出）。
+- 页面展示 Pipeline 步骤、人物表和场景列表等中间产物。
 
-后续阶段会继续实现正式章节解析、AI 生成 pipeline、Schema 校验面板和结构化编辑工作台。
+后续阶段会实现真实 LLM Provider、Schema 校验面板和结构化编辑工作台。
 
 ## 快速开始
 
@@ -42,10 +44,10 @@ http://localhost:3000
 ## 关键目录
 
 ```text
-src/app/                 # Next.js App Router 页面与 API
+src/app/                 # Next.js App Router 页面与 API（含 /api/generate）
 src/components/          # 工作台 UI 组件
 src/lib/chapters/        # 章节解析与 3+ 章节输入校验
-src/lib/                 # mock 数据等基础逻辑
+src/lib/ai/              # AI Provider 接口、Mock Provider 和 Pipeline 编排
 schemas/                 # 剧本 YAML Schema
 examples/                # 原创小说输入样例和 YAML 输出样例
 docs/                    # 竞赛文档、开发计划、技术选型和项目状态
@@ -67,7 +69,7 @@ docs/                    # 竞赛文档、开发计划、技术选型和项目�
 运行时依赖：
 
 - `next`、`react`、`react-dom`：Web 应用和 UI。
-- `yaml`：后续用于 YAML parse 和 stringify。
+- `yaml`：YAML 序列化，将 Pipeline 生成的剧本对象输出为 YAML 文本。
 - `ajv`：后续用于 JSON Schema 校验。
 - `openai`：后续用于真实 LLM Provider。
 - `lucide-react`：工具按钮图标。
@@ -87,7 +89,9 @@ docs/                    # 竞赛文档、开发计划、技术选型和项目�
 - YAML 剧本 Schema 设计。
 - 原创三章节小说样例《雨夜档案》。
 - 对应的结构化 YAML 剧本样例。
-- 面向小说转剧本流程的工作台页面骨架。
+- 章节解析模块（支持中文/英文章节标题格式）。
+- 多阶段生成 Pipeline 架构（GenerationProvider 接口 + MockProvider）。
+- 面向小说转剧本流程的工作台页面（含 Pipeline 步骤展示和中间产物）。
 
 ## Demo 视频
 

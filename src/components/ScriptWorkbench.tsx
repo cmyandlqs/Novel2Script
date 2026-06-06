@@ -7,9 +7,13 @@ import {
   FileText,
   Loader2,
   Play,
+  Users,
+  Film,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { parseChapters } from "@/lib/chapters/parseChapters";
+import type { PipelineResult } from "@/lib/ai/types";
+import YAML from "yaml";
 
 const fallbackNovel = `# 《雨夜档案》
 
@@ -19,67 +23,18 @@ const fallbackNovel = `# 《雨夜档案》
 
 ## 第二章 被删掉的城市
 
-第二天清晨，林舟打开硬盘，里面只有一个名为“南桥计划”的文件夹。
+第二天清晨，林舟打开硬盘，里面只有一个名为"南桥计划"的文件夹。
 
 ## 第三章 钟楼里的名单
 
 林舟和许澄按照照片上的路牌，在雨后的城市边缘找到一座废弃钟楼。`;
 
-const fallbackYaml = `metadata:
-  title: "雨夜档案"
-  schema_version: "1.0.0"
-  draft_type: "screenplay_draft"
-  language: "zh-CN"
-
-source:
-  chapter_count: 3
-  chapters:
-    - id: "chapter_001"
-      title: "雨中的包裹"
-      order: 1
-      summary: "林舟收到神秘硬盘。"
-    - id: "chapter_002"
-      title: "被删掉的城市"
-      order: 2
-      summary: "南桥区记录被抹除。"
-    - id: "chapter_003"
-      title: "钟楼里的名单"
-      order: 3
-      summary: "林舟发现自己在名单上。"
-
-characters:
-  - id: "character_001"
-    name: "林舟"
-    role: "protagonist"
-    description: "档案馆夜班管理员。"
-
-locations:
-  - id: "location_001"
-    name: "旧城区档案馆"
-    description: "保存城市旧档案的建筑。"
-
-plot_summary:
-  logline: "档案管理员发现一整个城区正从城市记忆中被抹除。"
-  synopsis: "林舟追查神秘硬盘和南桥区失踪档案。"
-  central_conflict: "保留真相与抹除记忆之间的冲突。"
-
-scenes:
-  - id: "scene_001"
-    title: "午夜投递箱"
-    chapter_source: ["chapter_001"]
-    location_id: "location_001"
-    time_of_day: "深夜"
-    characters: ["character_001"]
-    summary: "林舟收到神秘硬盘。"
-    dramatic_purpose: "把主角卷入谜团。"
-    beats:
-      - type: "action"
-        content: "投递箱突然发出金属碰撞声。"`;
-
 export function ScriptWorkbench() {
   const [novelText, setNovelText] = useState(fallbackNovel);
-  const [scriptYaml, setScriptYaml] = useState(fallbackYaml);
-  const [status, setStatus] = useState("初稿已就绪");
+  const [pipelineResult, setPipelineResult] =
+    useState<PipelineResult | null>(null);
+  const [scriptYaml, setScriptYaml] = useState("");
+  const [status, setStatus] = useState("就绪，点击生成初稿开始");
   const [isLoading, setIsLoading] = useState(false);
 
   const chapterResult = useMemo(() => parseChapters(novelText), [novelText]);
@@ -101,7 +56,8 @@ export function ScriptWorkbench() {
       };
       setNovelText(data.novel);
       setScriptYaml(data.scriptYaml);
-      setStatus("已加载原创三章样例和 Schema 示例输出");
+      setPipelineResult(null);
+      setStatus("已加载原创三章样例");
     } catch {
       setStatus("示例接口不可用，已保留本地兜底内容");
     } finally {
@@ -109,10 +65,44 @@ export function ScriptWorkbench() {
     }
   }
 
-  function generateMock() {
-    setStatus(chapterReady ? "已生成 YAML 剧本初稿" : "至少需要 3 个章节后才能生成");
-    if (chapterReady) {
-      setScriptYaml(fallbackYaml);
+  async function generateDraft() {
+    if (!chapterReady) return;
+
+    setIsLoading(true);
+    setPipelineResult(null);
+    setStatus("正在生成剧本初稿...");
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ novelText }),
+      });
+
+      const data = (await response.json()) as
+        | PipelineResult
+        | { error: string };
+
+      if (!response.ok) {
+        const errorData = data as { error: string };
+        setStatus(`生成失败：${errorData.error}`);
+        return;
+      }
+
+      const result = data as PipelineResult;
+      setPipelineResult(result);
+      setScriptYaml(YAML.stringify(result.draft, { lineWidth: 0 }));
+
+      const hasError = result.steps.some((s) => s.status === "error");
+      if (hasError) {
+        setStatus("部分步骤出错，请查看下方步骤详情");
+      } else {
+        setStatus("剧本初稿生成完成");
+      }
+    } catch {
+      setStatus("网络错误，请检查开发服务器是否在运行。");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -132,6 +122,14 @@ export function ScriptWorkbench() {
     setStatus("YAML 已下载");
   }
 
+  const roleLabel: Record<string, string> = {
+    protagonist: "主角",
+    antagonist: "反派",
+    supporting: "配角",
+    minor: "次要角色",
+    unknown: "未知",
+  };
+
   return (
     <main className="min-h-screen bg-[var(--background)]">
       <header className="border-b border-[var(--border)] bg-[var(--surface)]">
@@ -150,16 +148,24 @@ export function ScriptWorkbench() {
               onClick={loadExample}
               type="button"
             >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
               载入样例
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--accent)] px-3 text-sm font-medium text-white hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-55"
-              disabled={!chapterReady}
-              onClick={generateMock}
+              disabled={!chapterReady || isLoading}
+              onClick={generateDraft}
               type="button"
             >
-              <Play className="h-4 w-4" />
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
               生成初稿
             </button>
           </div>
@@ -167,6 +173,7 @@ export function ScriptWorkbench() {
       </header>
 
       <section className="mx-auto grid max-w-[1440px] gap-4 px-4 py-4 sm:px-6 xl:grid-cols-[minmax(280px,0.9fr)_minmax(360px,1.1fr)_minmax(340px,1fr)]">
+        {/* Left: Novel Input */}
         <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
           <div className="border-b border-[var(--border)] px-4 py-3">
             <h2 className="text-sm font-semibold">小说输入</h2>
@@ -182,14 +189,16 @@ export function ScriptWorkbench() {
           />
         </section>
 
+        {/* Middle: Chapters + Pipeline Results */}
         <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
           <div className="border-b border-[var(--border)] px-4 py-3">
-            <h2 className="text-sm font-semibold">章节解析与状态</h2>
+            <h2 className="text-sm font-semibold">章节解析与生成状态</h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
-              章节列表与输入状态
+              章节列表、Pipeline 步骤与中间产物
             </p>
           </div>
           <div className="space-y-4 p-4">
+            {/* Validation Status */}
             <div
               className={`rounded-md border px-3 py-3 text-sm ${
                 chapterReady
@@ -199,34 +208,120 @@ export function ScriptWorkbench() {
             >
               <div className="flex items-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4" />
-                {chapterReady ? "满足 3+ 章节输入要求" : "至少需要 3 个章节"}
+                {chapterReady
+                  ? "满足 3+ 章节输入要求"
+                  : "至少需要 3 个章节"}
               </div>
               <p className="mt-1 text-xs">
                 {chapterReady ? status : chapterResult.errors[0]}
               </p>
             </div>
 
+            {/* Chapter List */}
             <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+                章节
+              </h3>
               {chapters.map((chapter) => (
                 <article
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-3"
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
                   key={`${chapter.order}-${chapter.title}`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-medium">{chapter.title}</h3>
-                    <span className="shrink-0 rounded bg-white px-2 py-1 text-xs text-[var(--muted)]">
+                    <h4 className="text-sm font-medium">{chapter.title}</h4>
+                    <span className="shrink-0 rounded bg-white px-2 py-0.5 text-xs text-[var(--muted)]">
                       {chapter.charCount} 字
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-[var(--muted)]">
-                    第 {chapter.order} 个章节
-                  </p>
                 </article>
               ))}
             </div>
+
+            {/* Pipeline Steps */}
+            {pipelineResult && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+                  Pipeline 步骤
+                </h3>
+                {pipelineResult.steps.map((step) => (
+                  <div
+                    className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2 text-sm"
+                    key={step.step}
+                  >
+                    {step.status === "completed" ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                    ) : (
+                      <span className="inline-block h-4 w-4 shrink-0 rounded-full bg-red-400" />
+                    )}
+                    <span className="font-medium">{step.label}</span>
+                    <span className="ml-auto text-xs text-[var(--muted)]">
+                      {step.duration_ms}ms
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Characters */}
+            {pipelineResult?.draft.characters && (
+              <div className="space-y-2">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+                  <Users className="h-3.5 w-3.5" />
+                  人物
+                </h3>
+                {pipelineResult.draft.characters.map((ch) => (
+                  <article
+                    className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
+                    key={ch.id}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{ch.name}</span>
+                      <span className="shrink-0 rounded bg-white px-2 py-0.5 text-xs text-[var(--muted)]">
+                        {roleLabel[ch.role] ?? ch.role}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      {ch.description}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            {/* Scenes */}
+            {pipelineResult?.draft.scenes && (
+              <div className="space-y-2">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+                  <Film className="h-3.5 w-3.5" />
+                  场景
+                </h3>
+                {pipelineResult.draft.scenes.map((scene) => (
+                  <article
+                    className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
+                    key={scene.id}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">
+                        {scene.title}
+                      </span>
+                      <span className="shrink-0 rounded bg-white px-2 py-0.5 text-xs text-[var(--muted)]">
+                        {scene.time_of_day}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      {scene.summary}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      {scene.beats.length} 个 beat
+                    </p>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
+        {/* Right: YAML Output */}
         <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
             <div>
