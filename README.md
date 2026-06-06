@@ -44,11 +44,23 @@ http://localhost:3000
 ```text
 src/app/                 # Next.js App Router 页面与 API
 src/components/          # 工作台 UI 组件
-src/lib/                 # 章节预览、mock 数据等基础逻辑
+src/lib/chapters/        # 章节解析与 3+ 章节输入校验
+src/lib/                 # mock 数据等基础逻辑
 schemas/                 # 剧本 YAML Schema
 examples/                # 原创小说输入样例和 YAML 输出样例
 docs/                    # 竞赛文档、开发计划、技术选型和项目状态
 ```
+
+## 输入规则
+
+当前章节解析支持：
+
+- `第1章 标题`
+- `第一章 标题`
+- `Chapter 1 Title`
+- Markdown 标题形式，例如 `## 第一章 标题`
+
+输入必须识别到至少 3 个章节。少于 3 个章节时，页面会阻止生成初稿并显示错误提示。
 
 ## 依赖说明
 

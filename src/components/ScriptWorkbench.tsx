@@ -9,7 +9,7 @@ import {
   Play,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { previewChapters } from "@/lib/chapterPreview";
+import { parseChapters } from "@/lib/chapters/parseChapters";
 
 const fallbackNovel = `# 《雨夜档案》
 
@@ -82,8 +82,9 @@ export function ScriptWorkbench() {
   const [status, setStatus] = useState("初稿已就绪");
   const [isLoading, setIsLoading] = useState(false);
 
-  const chapters = useMemo(() => previewChapters(novelText), [novelText]);
-  const chapterReady = chapters.length >= 3;
+  const chapterResult = useMemo(() => parseChapters(novelText), [novelText]);
+  const chapters = chapterResult.chapters;
+  const chapterReady = chapterResult.isValid;
 
   async function loadExample() {
     setIsLoading(true);
@@ -201,7 +202,7 @@ export function ScriptWorkbench() {
                 {chapterReady ? "满足 3+ 章节输入要求" : "至少需要 3 个章节"}
               </div>
               <p className="mt-1 text-xs">
-                {status}
+                {chapterReady ? status : chapterResult.errors[0]}
               </p>
             </div>
 
