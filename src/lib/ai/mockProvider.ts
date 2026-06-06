@@ -69,11 +69,14 @@ export class MockProvider implements GenerationProvider {
     characters: ScriptCharacter[],
     locations: ScriptLocation[],
   ): Promise<ScriptScene[]> {
+    const fallbackCharId = characters[0]?.id ?? "character_001";
+    const fallbackLocId = locations[0]?.id ?? "location_001";
+
     return chapters.slice(0, 3).map((ch, i) => ({
       id: `scene_${String(i + 1).padStart(3, "0")}`,
       title: `场景 ${i + 1}`,
       chapter_source: [ch.id],
-      location_id: locations[0].id,
+      location_id: fallbackLocId,
       time_of_day: i === 0 ? "深夜" : "白天",
       characters: characters.slice(0, 1).map((c) => c.id),
       summary: `来自第 ${i + 1} 章「${ch.title}」的关键场景。`,
@@ -86,7 +89,7 @@ export class MockProvider implements GenerationProvider {
         {
           type: "dialogue",
           content: "这里有些不对劲。",
-          speaker_id: characters[0].id,
+          speaker_id: fallbackCharId,
         },
         {
           type: "narration",

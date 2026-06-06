@@ -45,10 +45,11 @@ export async function POST(request: Request) {
 
   try {
     const provider = createProvider();
+    const safeTitle = (title ?? "未命名作品").slice(0, 200);
     const result = await runPipeline(
       provider,
       parseResult.chapters,
-      title ?? "未命名作品",
+      safeTitle,
     );
     return NextResponse.json(result);
   } catch (error) {
