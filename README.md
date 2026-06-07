@@ -2,30 +2,24 @@
 
 AI 小说转剧本工具。项目面向小说作者，目标是把小说文本转换为可编辑、可继续打磨的 YAML 结构化剧本初稿；竞赛 Demo 使用 3 个章节以上的小说样例证明多章节处理能力。
 
-## 当前状态
+## Demo 视频
 
-当前处于阶段 8：README、视频和最终提交准备中。
+- [点击查看 Demo 视频](assets/demo.mp4)
 
-已具备：
+## YAML Schema
 
-- Next.js + TypeScript + Tailwind Web 工程骨架。
-- 原创 3 章节小说样例。
-- YAML 剧本输出 Schema。
-- 章节解析，支持 1 章试用生成，并支持 3+ 章节竞赛 Demo。
-- 多阶段生成 Pipeline（章节摘要 → 人物抽取 → 地点抽取 → 剧情梗概 → 场景拆分 → 改编说明）。
-- 真实流式生成反馈，前端能看到每个 Pipeline 步骤的开始、完成和错误状态。
-- Mock Provider（无需 API Key 即可演示）和 OpenAI 兼容 Provider。
-- 前端大模型 API 配置面板（支持服务端 `.env` 状态展示和会话级运行时覆盖）。
-- 文本上传入口，支持 `.txt`、`.md`、`.markdown`，自动检测 UTF-8 / GB18030 / GBK 编码。
-- YAML 解析校验、Schema 校验（AJV）、业务规则校验（引用一致性、章节覆盖）。
-- 质量评分面板（赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
-- 可编辑剧本工作台：人物名称/描述、场景标题/摘要/时间段、beat 内容均可直接编辑，修改后 YAML 实时同步，并提示重新校验后导出。
+剧本输出契约位于 [`schemas/script.schema.json`](schemas/script.schema.json)，字段设计原因见 [`docs/YAML_Schema设计说明.md`](docs/YAML_Schema设计说明.md)。
 
-Demo 视频和工作台截图已加入仓库，后续只需在竞赛规定时间公开仓库并做最终提交检查。
+## 示例输入与输出
+
+- 原创示例：[`examples/sample-novel.md`](examples/sample-novel.md) → [`examples/output-script.yaml`](examples/output-script.yaml)
+- 3+ 章节示例：[`examples/zhe-tian-chapter-1-3.md`](examples/zhe-tian-chapter-1-3.md) → [`examples/zhe-tian-output.yaml`](examples/zhe-tian-output.yaml)（辰东《遮天》前三章，仅作演示）
+
+示例文件说明见 [`examples/README.md`](examples/README.md)。
 
 ## 工作台截图
 
-![Novel2Script 工作台截图](assets/novel2script-workbench.png)
+<img src="assets/novel2script-workbench.png" alt="Novel2Script 工作台截图" width="60%" />
 
 ## 快速开始
 
@@ -94,24 +88,6 @@ OPENAI_BASE_URL=https://opencode.ai/zen/go/v1
 OPENAI_MODEL=deepseek-v4-flash
 ```
 
-## 依赖说明
-
-运行时依赖：
-
-- `next`、`react`、`react-dom`：Web 应用和 UI。
-- `yaml`：YAML 序列化，将 Pipeline 生成的剧本对象输出为 YAML 文本。
-- `ajv`：JSON Schema draft 2020-12 校验，用于验证生成结果是否符合 Schema。
-- `openai`：OpenAI 兼容 Provider，通过环境变量配置 API Key 后使用真实模型生成。
-- `lucide-react`：工具按钮图标。
-
-开发依赖：
-
-- `typescript`：类型检查。
-- `tailwindcss`、`@tailwindcss/postcss`：样式系统。
-- `eslint`、`eslint-config-next`：代码质量检查。
-- `vitest`：单元测试。
-- `prettier`：格式化工具。
-
 ## 原创功能说明
 
 当前原创部分包括：
@@ -127,18 +103,3 @@ OPENAI_MODEL=deepseek-v4-flash
 - YAML 校验模块（语法校验 + Schema 校验 + 业务规则校验）。
 - 质量评分面板（5 个维度：赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
 - 面向小说转剧本流程的工作台页面（含 Pipeline 步骤展示、中间产物、校验结果和评分）。
-
-## YAML Schema
-
-剧本输出契约位于 [`schemas/script.schema.json`](schemas/script.schema.json)，字段设计原因见 [`docs/YAML_Schema设计说明.md`](docs/YAML_Schema设计说明.md)。
-
-## 示例输入与输出
-
-- 原创示例：[`examples/sample-novel.md`](examples/sample-novel.md) → [`examples/output-script.yaml`](examples/output-script.yaml)
-- 3+ 章节示例：[`examples/zhe-tian-chapter-1-3.md`](examples/zhe-tian-chapter-1-3.md) → [`examples/zhe-tian-output.yaml`](examples/zhe-tian-output.yaml)（辰东《遮天》前三章，仅作演示）
-
-示例文件说明见 [`examples/README.md`](examples/README.md)。
-
-## Demo 视频
-
-- [点击查看 Demo 视频](assets/demo.mp4)
