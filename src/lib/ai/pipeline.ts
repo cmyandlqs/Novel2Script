@@ -115,6 +115,43 @@ function normalizeAdaptationNotes(
   });
 }
 
+function normalizeScenes(
+  scenes: ScriptScene[] | undefined,
+  characters: ScriptCharacter[] | undefined,
+): ScriptScene[] | undefined {
+  if (!scenes) return undefined;
+
+  const characterIds = new Set(
+    (characters ?? []).map((character) => character.id),
+  );
+  const fallbackCharacterId = characters?.[0]?.id;
+
+  return scenes.map((scene) => {
+    const validSceneCharacters = scene.characters.filter((id) =>
+      characterIds.has(id),
+    );
+
+    if (validSceneCharacters.length > 0) {
+      return { ...scene, characters: validSceneCharacters };
+    }
+
+    const dialogueSpeakerIds = scene.beats
+      .map((beat) => beat.speaker_id)
+      .filter(
+        (id): id is string => typeof id === "string" && characterIds.has(id),
+      );
+
+    const fallbackCharacters =
+      dialogueSpeakerIds.length > 0
+        ? [...new Set(dialogueSpeakerIds)]
+        : fallbackCharacterId
+          ? [fallbackCharacterId]
+          : [];
+
+    return { ...scene, characters: fallbackCharacters };
+  });
+}
+
 export async function runPipeline(
   provider: GenerationProvider,
   chapters: ParsedChapter[],
@@ -212,7 +249,7 @@ export async function runPipeline(
     characters: characters ?? [],
     locations: locations ?? [],
     plot_summary: plotSummary ?? defaultPlotSummary,
-    scenes: scenes ?? [],
+    scenes: normalizeScenes(scenes, characters) ?? [],
     adaptation_notes: normalizeAdaptationNotes(adaptationNotes),
   };
 
