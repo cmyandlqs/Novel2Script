@@ -204,6 +204,203 @@ beats 让剧本内容可以逐条编辑，而不是只能修改整段文本。
 
 这些检查会在开发计划阶段 5 的 YAML 校验与质量评分中实现。
 
+## 字段级约束速查表
+
+下表对照 `schemas/script.schema.json` 的字段约束，便于评审快速查阅每个字段的类型、是否必填和取值范围。
+
+### metadata
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `title` | string | ✅ | 非空 |
+| `schema_version` | string | ✅ | 正则 `^\d+\.\d+\.\d+$`，遵循 SemVer |
+| `draft_type` | string | ✅ | 枚举仅 `screenplay_draft` |
+| `language` | string | ✅ | 长度 ≥ 2，建议 BCP-47 标签如 `zh-CN` |
+| `genre` | string | ❌ | 自由文本 |
+| `target_format` | string | ❌ | 枚举：`film` / `short_drama` / `stage_play` / `web_series` / `unspecified`，默认 `unspecified` |
+
+顶层 `additionalProperties: false`，禁止未声明字段。`required` 固定为 `metadata`、`source`、`characters`、`locations`、`plot_summary`、`scenes`。
+
+### source
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `chapter_count` | integer | ✅ | 最小值 1 |
+| `chapters` | array | ✅ | 长度 ≥ 1 |
+| `chapters[].id` | string | ✅ | 建议 `chapter_NNN` 格式 |
+| `chapters[].title` | string | ✅ | 非空 |
+| `chapters[].order` | integer | ✅ | 1-based 序号 |
+| `chapters[].summary` | string | ✅ | 2-3 句话 |
+| `chapters[].key_events` | array | ✅ | 短语数组 |
+| `overall_summary` | string | ❌ | 整体小说摘要 |
+
+### characters
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `id` | string | ✅ | `character_NNN` 格式 |
+| `name` | string | ✅ | 非空 |
+| `role` | string | ✅ | 枚举：`protagonist` / `antagonist` / `supporting` / `minor` / `unknown` |
+| `description` | string | ✅ | 1-2 句 |
+| `motivation` | string | ❌ | 行为可推断时填写 |
+| `arc` | string | ❌ | 人物变化方向，无法判断时省略 |
+
+### locations
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `id` | string | ✅ | `location_NNN` 格式 |
+| `name` | string | ✅ | 非空 |
+| `description` | string | ✅ | 1-2 句 |
+
+### plot_summary
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `logline` | string | ✅ | 一句话故事钩子 |
+| `synopsis` | string | ✅ | 4-6 句 |
+| `central_conflict` | string | ✅ | 核心冲突 |
+| `themes` | array | ✅ | 字符串数组，2-5 个主题词 |
+
+### scenes
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `id` | string | ✅ | `scene_NNN` 格式 |
+| `title` | string | ✅ | 面向创作者可读 |
+| `chapter_source` | array | ✅ | 章节 ID 数组，长度 ≥ 1 |
+| `location_id` | string | ✅ | 必须引用 locations |
+| `time_of_day` | string | ✅ | 简短时间段 |
+| `characters` | array | ✅ | 人物 ID 数组，长度 ≥ 1 |
+| `summary` | string | ✅ | 1-2 句 |
+| `dramatic_purpose` | string | ✅ | 戏剧作用 |
+| `beats` | array | ✅ | 长度 3-7，每条见下表 |
+
+### beats
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `type` | string | ✅ | 枚举：`action` / `dialogue` / `narration` / `transition` |
+| `content` | string | ✅ | 非空 |
+| `speaker_id` | string | dialogue 必填，其他 ❌ | 引用人物 ID |
+| `emotion` | string | ❌ | 情绪提示 |
+| `source_ref` | string | ❌ | 来源章节引用 |
+
+### adaptation_notes
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `type` | string | ✅ | 枚举：`assumption` / `uncertainty` / `editorial_suggestion` / `schema_note` |
+| `content` | string | ✅ | 非空 |
+| `related_scene_id` | string | ❌ | 关联场景 ID |
+
+## 校验反例
+
+下面给出四类常见错误，展示 Schema 校验（AJV）会拒绝什么样的输出。
+
+### 反例 1：顶层缺失 `plot_summary`
+
+```yaml
+metadata:
+  title: 反例
+  schema_version: 1.0.0
+  draft_type: screenplay_draft
+  language: zh-CN
+source:
+  chapter_count: 1
+  chapters:
+    - id: chapter_001
+      title: 示例
+      order: 1
+      summary: 缺少剧情梗概。
+      key_events: []
+characters: []
+locations: []
+scenes: []
+```
+
+**AJV 报错**：`must have required property 'plot_summary'`。原因：顶层 `required` 强制要求 6 个字段。
+
+### 反例 2：角色枚举值非法
+
+```yaml
+characters:
+  - id: character_001
+    name: 主角
+    role: hero
+    description: 主角。
+```
+
+**AJV 报错**：`role must be equal to one of the allowed values`（仅 `protagonist` / `antagonist` / `supporting` / `minor` / `unknown`）。原因：`role` 是有限枚举，避免下游 UI 因自由文本而无法稳定显示定位。
+
+### 反例 3：场景中无任何 beat
+
+```yaml
+scenes:
+  - id: scene_001
+    title: 场景一
+    chapter_source: [chapter_001]
+    location_id: location_001
+    time_of_day: 白天
+    characters: [character_001]
+    summary: 简短摘要。
+    dramatic_purpose: 建立关系。
+    beats: []
+```
+
+**AJV 报错**：`beats must NOT have fewer than 3 items`。原因：空 beats 场景没有可编辑内容，会让 UI 退化为"无内容场景"，对作者没有价值。
+
+### 反例 4：dialogue 缺少 speaker_id
+
+```yaml
+scenes:
+  - id: scene_001
+    title: 场景
+    chapter_source: [chapter_001]
+    location_id: location_001
+    time_of_day: 白天
+    characters: [character_001]
+    summary: 摘要。
+    dramatic_purpose: 戏剧作用。
+  beats:
+    - type: action
+      content: 主角走进房间。
+    - type: dialogue
+      content: 你好。
+    - type: action
+      content: 主角转身。
+```
+
+**AJV 报错**：`dialogue beat must have required property 'speaker_id'`。原因：脱离说话人的对白无法做引用一致性校验和 UI 角色徽章展示。
+
+## 版本演进与兼容性
+
+`metadata.schema_version` 遵循 SemVer 规范 `MAJOR.MINOR.PATCH`：
+
+| 版本位 | 变更类型 | 是否破坏向后兼容 | 是否需要评审重新验收 |
+| --- | --- | --- | --- |
+| MAJOR | 删除必填字段、改枚举值、收紧 `pattern` | 是 | 是 |
+| MINOR | 新增可选字段、新增枚举值 | 否 | 否 |
+| PATCH | 修正描述、不影响校验的注释调整 | 否 | 否 |
+
+**演进规则**：
+
+1. 新增字段统一放在允许额外属性的子节点（例如 `metadata.extensions`），不在主分支引入可选字段时强制 `additionalProperties: false`，避免破坏现有输出。
+2. 删除或重命名字段前，必须先在新 MAJOR 版本中标记 `deprecated`，并保留至少 1 个 MINOR 版本的过渡期。
+3. 枚举值增加（MINOR）默认是兼容性扩展：旧输出仍合法。
+4. 重大变更必须同步更新本文件的"字段级约束速查表"和"校验反例"两个章节。
+
+**当前版本**：`1.0.0`，定义于 `schemas/script.schema.json`。该版本是 2026-06-07 阶段 8 最终提交对应的稳定版。
+
+## 与竞赛硬约束的对应关系
+
+本文档对应竞赛硬约束第 5、6 条（"输出必须为 YAML 格式"和"必须额外提交 YAML Schema 定义文档，且文档需说明设计原因"）。具体对应：
+
+- **设计原因** → 本文"设计原则"（6 条）和"顶层结构说明"（7 个区块）。
+- **Schema 定义** → `schemas/script.schema.json` (JSON Schema draft 2020-12)。
+- **可编辑、可继续打磨** → 设计原则 2、3、5；字段速查表标注可选项。
+- **多章节处理能力** → 设计原则 1、4；竞赛最终 Demo 使用 3+ 章节样例。
+
 ## 示例说明
 
 `examples/sample-novel.md` 是原创 3 章节小说样例，满足赛题最终 Demo 输入规模要求。
@@ -219,4 +416,6 @@ beats 让剧本内容可以逐条编辑，而不是只能修改整段文本。
 - 来源章节映射。
 - 改编说明。
 
-该示例用于后续开发中的 Schema 校验、UI 预览、Demo 演示和测试样例。
+`examples/zhe-tian-chapter-1-3.md` 和 `examples/zhe-tian-output.yaml` 是使用真实 LLM Provider 在《遮天》前三章上跑出的对应输出，用于演示多章节处理能力和长文本稳定性。
+
+以上示例用于后续开发中的 Schema 校验、UI 预览、Demo 演示和测试样例。
