@@ -1,17 +1,20 @@
 "use client";
 
 import {
+  BookOpen,
   CheckCircle2,
   Clipboard,
+  Code2,
   Download,
-  FileUp,
   FileText,
+  FileUp,
+  Film,
   Loader2,
   Play,
-  Users,
-  Film,
-  ShieldCheck,
   RefreshCw,
+  Settings2,
+  Sparkles,
+  Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { parseChapters } from "@/lib/chapters/parseChapters";
@@ -40,12 +43,12 @@ const fallbackNovel = `# 《雨夜档案》
 林舟和许澄按照照片上的路牌，在雨后的城市边缘找到一座废弃钟楼。`;
 
 const generationStepList: { step: PipelineStepName; label: string }[] = [
-  { step: "summarize", label: "章节摘要" },
-  { step: "extract_characters", label: "人物抽取" },
-  { step: "extract_locations", label: "地点抽取" },
-  { step: "plot_summary", label: "剧情梗概" },
-  { step: "split_scenes", label: "场景拆分" },
-  { step: "adaptation_notes", label: "改编说明" },
+  { step: "summarize", label: "理解章节" },
+  { step: "extract_characters", label: "梳理人物" },
+  { step: "extract_locations", label: "整理地点" },
+  { step: "plot_summary", label: "提炼主线" },
+  { step: "split_scenes", label: "拆分场景" },
+  { step: "adaptation_notes", label: "生成建议" },
 ];
 
 type GenerationStepView = {
@@ -69,6 +72,37 @@ function createInitialGenerationSteps(): GenerationStepView[] {
   }));
 }
 
+function decodeNovelFile(buffer: ArrayBuffer): {
+  text: string;
+  encoding: string;
+} {
+  const decoders = [
+    { label: "UTF-8", decoder: new TextDecoder("utf-8", { fatal: true }) },
+    { label: "GB18030", decoder: new TextDecoder("gb18030", { fatal: true }) },
+    { label: "GBK", decoder: new TextDecoder("gbk", { fatal: true }) },
+  ];
+
+  for (const { label, decoder } of decoders) {
+    try {
+      return { text: decoder.decode(buffer), encoding: label };
+    } catch {
+      // Try the next common Chinese text encoding.
+    }
+  }
+
+  return {
+    text: new TextDecoder("utf-8").decode(buffer),
+    encoding: "UTF-8 fallback",
+  };
+}
+
+function beatLabel(type: string): string {
+  if (type === "dialogue") return "对白";
+  if (type === "action") return "动作";
+  if (type === "narration") return "旁白";
+  return "转场";
+}
+
 export function ScriptWorkbench() {
   const [novelText, setNovelText] = useState(fallbackNovel);
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(
@@ -76,7 +110,7 @@ export function ScriptWorkbench() {
   );
   const [editableDraft, setEditableDraft] = useState<ScriptDraft | null>(null);
   const [scriptYaml, setScriptYaml] = useState("");
-  const [status, setStatus] = useState("就绪，点击生成初稿开始");
+  const [status, setStatus] = useState("导入小说后生成剧本初稿");
   const [isLoading, setIsLoading] = useState(false);
   const [validationResult, setValidationResult] =
     useState<DraftValidationResult | null>(null);
@@ -86,17 +120,26 @@ export function ScriptWorkbench() {
   );
   const [hasEditedSinceValidation, setHasEditedSinceValidation] =
     useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const chapterResult = useMemo(() => parseChapters(novelText), [novelText]);
   const chapters = chapterResult.chapters;
   const chapterReady = chapterResult.isValid;
+
+  const characterNames = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const character of editableDraft?.characters ?? []) {
+      names.set(character.id, character.name);
+    }
+    return names;
+  }, [editableDraft]);
 
   function syncDraftAndYaml(draft: ScriptDraft, markEdited = true) {
     setEditableDraft(draft);
     setScriptYaml(YAML.stringify(draft, { lineWidth: 0 }));
     if (markEdited) {
       setHasEditedSinceValidation(true);
-      setStatus("已修改，YAML 已同步，建议重新校验");
+      setStatus("修改已同步到当前剧本");
     }
   }
 
@@ -113,7 +156,7 @@ export function ScriptWorkbench() {
 
   async function loadExample() {
     setIsLoading(true);
-    setStatus("正在加载示例...");
+    setStatus("正在载入样例...");
 
     try {
       const response = await fetch("/api/mock");
@@ -132,9 +175,9 @@ export function ScriptWorkbench() {
       setQualityScore(null);
       setHasEditedSinceValidation(false);
       setGenerationSteps(createInitialGenerationSteps());
-      setStatus("已加载原创三章样例");
+      setStatus("样例已载入，可以生成剧本");
     } catch {
-      setStatus("示例接口不可用，已保留本地兜底内容");
+      setStatus("示例不可用，已保留本地默认内容");
     } finally {
       setIsLoading(false);
     }
@@ -145,14 +188,12 @@ export function ScriptWorkbench() {
 
     const extension = file.name.split(".").pop()?.toLowerCase();
     if (!["txt", "md", "markdown"].includes(extension ?? "")) {
-      setStatus(
-        "当前仅支持上传 .txt、.md、.markdown 文本文件；PDF 解析后续单独支持。",
-      );
+      setStatus("当前支持上传 .txt、.md、.markdown 文本文件");
       return;
     }
 
     try {
-      const text = await file.text();
+      const { text, encoding } = decodeNovelFile(await file.arrayBuffer());
       setNovelText(text);
       setPipelineResult(null);
       setEditableDraft(null);
@@ -161,9 +202,9 @@ export function ScriptWorkbench() {
       setQualityScore(null);
       setHasEditedSinceValidation(false);
       setGenerationSteps(createInitialGenerationSteps());
-      setStatus(`已载入文件：${file.name}`);
+      setStatus(`已导入 ${file.name}（${encoding}）`);
     } catch {
-      setStatus("文件读取失败，请确认文件内容是可读取文本。");
+      setStatus("文件读取失败，请确认文件内容是可读取文本");
     }
   }
 
@@ -197,7 +238,7 @@ export function ScriptWorkbench() {
     setQualityScore(null);
     setHasEditedSinceValidation(false);
     setGenerationSteps(createInitialGenerationSteps());
-    setStatus("正在启动生成流程...");
+    setStatus("正在准备生成...");
 
     try {
       const response = await fetch("/api/generate/stream", {
@@ -213,7 +254,7 @@ export function ScriptWorkbench() {
       }
 
       if (!response.body) {
-        throw new Error("浏览器不支持流式响应。");
+        throw new Error("浏览器不支持流式响应");
       }
 
       const reader = response.body.getReader();
@@ -222,20 +263,15 @@ export function ScriptWorkbench() {
 
       const handleEvent = (eventName: string, payload: unknown) => {
         if (eventName === "pipeline_start") {
-          const data = payload as {
-            total_steps: number;
-            chapter_count: number;
-          };
-          setStatus(
-            `生成流程已启动：共 ${data.total_steps} 步，输入 ${data.chapter_count} 个章节`,
-          );
+          const data = payload as { chapter_count: number };
+          setStatus(`正在改编 ${data.chapter_count} 个章节`);
           return;
         }
 
         if (eventName === "step_start") {
           const data = payload as { step: PipelineStepName; label: string };
           updateGenerationStep(data.step, { status: "running" });
-          setStatus(`正在执行：${data.label}`);
+          setStatus(data.label);
           return;
         }
 
@@ -246,11 +282,7 @@ export function ScriptWorkbench() {
             duration_ms: data.duration_ms,
             error: data.error,
           });
-          setStatus(
-            data.status === "completed"
-              ? `已完成：${data.label}`
-              : `步骤出错：${data.label}`,
-          );
+          setStatus(data.status === "completed" ? data.label : "生成中断");
           return;
         }
 
@@ -262,7 +294,7 @@ export function ScriptWorkbench() {
           setValidationResult(data.validation);
           setQualityScore(data.qualityScore);
           setHasEditedSinceValidation(false);
-          setStatus("剧本初稿生成并校验完成");
+          setStatus("剧本已生成，可继续编辑或导出");
           return;
         }
 
@@ -295,7 +327,7 @@ export function ScriptWorkbench() {
       setStatus(
         error instanceof Error
           ? `生成失败：${error.message}`
-          : "网络错误，请检查开发服务器是否在运行。",
+          : "网络错误，请检查开发服务器是否在运行",
       );
     } finally {
       setIsLoading(false);
@@ -304,7 +336,7 @@ export function ScriptWorkbench() {
 
   async function copyYaml() {
     await navigator.clipboard.writeText(scriptYaml);
-    setStatus("YAML 已复制到剪贴板");
+    setStatus("YAML 已复制");
   }
 
   function downloadYaml() {
@@ -315,19 +347,17 @@ export function ScriptWorkbench() {
     anchor.download = "script-draft.yaml";
     anchor.click();
     URL.revokeObjectURL(url);
-    setStatus("YAML 已下载");
+    setStatus("已下载当前 YAML");
   }
 
   async function revalidate() {
     if (!scriptYaml) return;
     setIsLoading(true);
-    setStatus("正在重新校验...");
+    setStatus("正在检查当前结构...");
     await runValidation(scriptYaml);
-    setStatus("校验完成");
+    setStatus("结构检查完成");
     setIsLoading(false);
   }
-
-  // --- Edit handlers ---
 
   function updateCharacterField(
     id: string,
@@ -383,35 +413,38 @@ export function ScriptWorkbench() {
     antagonist: "反派",
     supporting: "配角",
     minor: "次要角色",
-    unknown: "未知",
+    unknown: "角色",
   };
 
+  const completedSteps = generationSteps.filter(
+    (step) => step.status === "completed",
+  ).length;
+
   return (
-    <main className="min-h-screen bg-[var(--background)]">
-      <header className="border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-3 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <header className="border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur">
+        <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-5 py-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-[var(--foreground)]">
-              Noverl2Script
-            </h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">剧本结构工作台</p>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[var(--accent)]" />
+              <h1 className="text-xl font-semibold">Noverl2Script</h1>
+            </div>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              AI 小说剧本改编工作台
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-alt)]"
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-alt)]"
               onClick={loadExample}
               type="button"
             >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileText className="h-4 w-4" />
-              )}
-              载入样例
+              <FileText className="h-4 w-4" />
+              样例
             </button>
-            <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-alt)]">
+            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-alt)]">
               <FileUp className="h-4 w-4" />
-              上传文本
+              导入文本
               <input
                 accept=".txt,.md,.markdown,text/plain,text/markdown"
                 className="sr-only"
@@ -422,7 +455,7 @@ export function ScriptWorkbench() {
               />
             </label>
             <button
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--accent)] px-3 text-sm font-medium text-white hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-55"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-55"
               disabled={!chapterReady || isLoading}
               onClick={generateDraft}
               type="button"
@@ -432,412 +465,359 @@ export function ScriptWorkbench() {
               ) : (
                 <Play className="h-4 w-4" />
               )}
-              生成初稿
+              生成剧本
             </button>
           </div>
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-[1440px] gap-4 px-4 py-4 sm:px-6 xl:grid-cols-[minmax(280px,0.9fr)_minmax(360px,1.1fr)_minmax(340px,1fr)]">
-        {/* Left: Novel Input */}
-        <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-          <div className="border-b border-[var(--border)] px-4 py-3">
-            <h2 className="text-sm font-semibold">小说输入</h2>
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              当前识别到 {chapters.length} 个章节，可直接粘贴或上传文本
-            </p>
+      <section className="mx-auto max-w-[1500px] px-5 py-6 sm:px-8">
+        <div className="mb-5 grid gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--muted)] md:grid-cols-[1fr_auto] md:items-center">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="inline-flex items-center gap-1.5 text-[var(--foreground)]">
+              <BookOpen className="h-4 w-4" />
+              已解析 {chapters.length} 个章节
+            </span>
+            <span>{status}</span>
           </div>
-          <textarea
-            aria-label="小说文本输入"
-            className="h-[calc(100vh-13rem)] min-h-[28rem] w-full resize-none border-0 bg-transparent p-4 text-sm leading-6 text-[var(--foreground)] outline-none"
-            onChange={(event) => setNovelText(event.target.value)}
-            value={novelText}
-          />
-        </section>
+          {(isLoading || pipelineResult) && (
+            <div className="flex flex-wrap gap-2">
+              {generationSteps.map((step) => (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ${
+                    step.status === "completed"
+                      ? "bg-[var(--success-soft)] text-[var(--success)]"
+                      : step.status === "running"
+                        ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                        : step.status === "error"
+                          ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                          : "bg-[var(--surface-alt)] text-[var(--muted)]"
+                  }`}
+                  key={step.step}
+                >
+                  {step.status === "running" ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : step.status === "completed" ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : null}
+                  {step.label}
+                </span>
+              ))}
+              <span className="rounded-full bg-[var(--surface-alt)] px-2.5 py-1 text-xs">
+                {completedSteps}/{generationSteps.length}
+              </span>
+            </div>
+          )}
+        </div>
 
-        {/* Middle: Chapters + Pipeline + Editable Draft */}
-        <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-          <div className="border-b border-[var(--border)] px-4 py-3">
-            <h2 className="text-sm font-semibold">章节解析与编辑</h2>
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              章节列表、Pipeline 步骤与可编辑剧本
-            </p>
-          </div>
-          <div className="space-y-4 p-4">
-            {/* Input Validation */}
-            <div
-              className={`rounded-md border px-3 py-3 text-sm ${
-                chapterReady
-                  ? "border-emerald-200 bg-emerald-50 text-[var(--success)]"
-                  : "border-amber-200 bg-amber-50 text-[var(--warning)]"
-              }`}
-            >
-              <div className="flex items-center gap-2 font-medium">
-                <CheckCircle2 className="h-4 w-4" />
-                {chapterReady
-                  ? chapters.length >= 3
-                    ? "满足竞赛 Demo 3+ 章节要求"
-                    : "可生成试用初稿"
-                  : "请输入小说文本"}
-              </div>
-              <p className="mt-1 text-xs">
-                {chapterReady
-                  ? chapters.length >= 3
-                    ? status
-                    : `${status}；当前少于 3 章，适合试用，最终竞赛 Demo 建议使用 3 章以上。`
-                  : chapterResult.errors[0]}
+        <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.85fr)_minmax(620px,1.15fr)]">
+          <section className="min-h-[calc(100vh-13rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <div className="border-b border-[var(--border)] px-5 py-4">
+              <h2 className="text-base font-semibold">原文</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                粘贴小说内容，或导入文本文件。系统会自动识别章节。
               </p>
             </div>
+            <textarea
+              aria-label="小说文本输入"
+              className="h-[calc(100vh-20rem)] min-h-[34rem] w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-7 text-[var(--foreground)] outline-none"
+              onChange={(event) => setNovelText(event.target.value)}
+              value={novelText}
+            />
+          </section>
 
-            {/* Chapter List */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
-                章节
-              </h3>
-              {chapters.map((chapter) => (
-                <article
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
-                  key={`${chapter.order}-${chapter.title}`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <h4 className="text-sm font-medium">{chapter.title}</h4>
-                    <span className="shrink-0 rounded bg-white px-2 py-0.5 text-xs text-[var(--muted)]">
-                      {chapter.charCount} 字
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            {/* Pipeline Steps */}
-            {(isLoading || pipelineResult) && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
-                    生成流程
-                  </h3>
-                  <span className="text-xs text-[var(--muted)]">
-                    {
-                      generationSteps.filter(
-                        (step) => step.status === "completed",
-                      ).length
-                    }{" "}
-                    / {generationSteps.length}
-                  </span>
-                </div>
-                {generationSteps.map((step) => (
-                  <div
-                    className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2 text-sm"
-                    key={step.step}
-                  >
-                    {step.status === "completed" ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                    ) : step.status === "running" ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--accent)]" />
-                    ) : step.status === "error" ? (
-                      <span className="inline-block h-4 w-4 shrink-0 rounded-full bg-red-400" />
-                    ) : (
-                      <span className="inline-block h-4 w-4 shrink-0 rounded-full border border-[var(--border)] bg-white" />
-                    )}
-                    <span className="font-medium">{step.label}</span>
-                    <span className="ml-auto text-xs text-[var(--muted)]">
-                      {step.status === "pending"
-                        ? "等待中"
-                        : step.status === "running"
-                          ? "进行中"
-                          : `${step.duration_ms ?? 0}ms`}
-                    </span>
-                  </div>
-                ))}
+          <section className="min-h-[calc(100vh-13rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <div className="flex flex-col gap-3 border-b border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-base font-semibold">剧本工作台</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  编辑人物、场景和对白，导出当前剧本。
+                </p>
               </div>
-            )}
-
-            {/* Editable Characters */}
-            {editableDraft && (
-              <div className="space-y-2">
-                <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
-                  <Users className="h-3.5 w-3.5" />
-                  人物（可编辑）
-                </h3>
-                {editableDraft.characters.map((ch) => (
-                  <article
-                    className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
-                    key={ch.id}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <input
-                        aria-label="人物名称"
-                        className="flex-1 rounded border border-[var(--border)] bg-white px-2 py-1 text-sm font-medium outline-none focus:border-[var(--accent)]"
-                        onChange={(e) =>
-                          updateCharacterField(ch.id, "name", e.target.value)
-                        }
-                        type="text"
-                        value={ch.name}
-                      />
-                      <span className="shrink-0 rounded bg-white px-2 py-0.5 text-xs text-[var(--muted)]">
-                        {roleLabel[ch.role] ?? ch.role}
-                      </span>
-                    </div>
-                    <textarea
-                      aria-label="人物描述"
-                      className="w-full resize-none rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
-                      onChange={(e) =>
-                        updateCharacterField(
-                          ch.id,
-                          "description",
-                          e.target.value,
-                        )
-                      }
-                      rows={2}
-                      value={ch.description}
-                    />
-                  </article>
-                ))}
-              </div>
-            )}
-
-            {/* Editable Scenes with Beats */}
-            {editableDraft && (
-              <div className="space-y-2">
-                <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
-                  <Film className="h-3.5 w-3.5" />
-                  场景（可编辑）
-                </h3>
-                {editableDraft.scenes.map((scene) => (
-                  <article
-                    className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
-                    key={scene.id}
-                  >
-                    <div className="flex items-center gap-2">
-                      <input
-                        aria-label="场景标题"
-                        className="flex-1 rounded border border-[var(--border)] bg-white px-2 py-1 text-sm font-medium outline-none focus:border-[var(--accent)]"
-                        onChange={(e) =>
-                          updateSceneField(scene.id, "title", e.target.value)
-                        }
-                        type="text"
-                        value={scene.title}
-                      />
-                      <input
-                        aria-label="时间段"
-                        className="w-20 shrink-0 rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
-                        onChange={(e) =>
-                          updateSceneField(
-                            scene.id,
-                            "time_of_day",
-                            e.target.value,
-                          )
-                        }
-                        type="text"
-                        value={scene.time_of_day}
-                      />
-                    </div>
-                    <textarea
-                      aria-label="场景摘要"
-                      className="w-full resize-none rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
-                      onChange={(e) =>
-                        updateSceneField(scene.id, "summary", e.target.value)
-                      }
-                      rows={2}
-                      value={scene.summary}
-                    />
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wide">
-                        Beats
-                      </p>
-                      {scene.beats.map((beat, bi) => (
-                        <div
-                          className="flex items-start gap-1.5"
-                          key={`${scene.id}-beat-${bi}`}
-                        >
-                          <span className="mt-1 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-[var(--muted)]">
-                            {beat.type === "dialogue"
-                              ? "对白"
-                              : beat.type === "action"
-                                ? "动作"
-                                : beat.type === "narration"
-                                  ? "旁白"
-                                  : "转场"}
-                          </span>
-                          <textarea
-                            aria-label={`beat ${bi + 1}`}
-                            className="flex-1 resize-none rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
-                            onChange={(e) =>
-                              updateBeatContent(scene.id, bi, e.target.value)
-                            }
-                            rows={beat.content.length > 30 ? 2 : 1}
-                            value={beat.content}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Right: YAML + Validation + Scoring */}
-        <section className="min-h-[calc(100vh-7rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
-            <div>
-              <h2 className="text-sm font-semibold">YAML 剧本输出</h2>
-              <p className="mt-1 text-xs text-[var(--muted)]">Schema v1.0.0</p>
-            </div>
-            <div className="flex gap-2">
-              {editableDraft && (
+              <div className="flex flex-wrap gap-2">
                 <button
-                  aria-label="重新校验"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] px-2 text-xs hover:bg-[var(--surface-alt)]"
-                  disabled={isLoading}
-                  onClick={revalidate}
-                  title="重新校验"
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] px-3 text-sm hover:bg-[var(--surface-alt)]"
+                  onClick={() => setShowAdvanced((value) => !value)}
                   type="button"
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  重新校验
+                  <Settings2 className="h-4 w-4" />
+                  高级信息
                 </button>
-              )}
-              <button
-                aria-label="复制 YAML"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border)] hover:bg-[var(--surface-alt)]"
-                onClick={copyYaml}
-                title="复制 YAML"
-                type="button"
-              >
-                <Clipboard className="h-4 w-4" />
-              </button>
-              <button
-                aria-label="下载 YAML"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border)] hover:bg-[var(--surface-alt)]"
-                onClick={downloadYaml}
-                title="下载 YAML"
-                type="button"
-              >
-                <Download className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          <div className="p-4">
-            <pre className="h-64 min-h-[10rem] overflow-auto text-xs leading-5 text-[var(--foreground)]">
-              <code>{scriptYaml}</code>
-            </pre>
-
-            {/* Validation Results */}
-            {hasEditedSinceValidation && (
-              <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                已修改，YAML 已同步。请重新校验后再下载或复制最终版本。
-              </div>
-            )}
-            {validationResult && (
-              <div className="mt-4 space-y-3">
-                <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  校验结果
-                </h3>
-                <div
-                  className={`rounded-md border px-3 py-2 text-sm ${
-                    validationResult.valid
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-red-200 bg-red-50 text-red-700"
-                  }`}
+                <button
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] px-3 text-sm hover:bg-[var(--surface-alt)]"
+                  disabled={!scriptYaml}
+                  onClick={downloadYaml}
+                  type="button"
                 >
-                  <div className="flex items-center gap-2 font-medium">
-                    {validationResult.valid ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <span className="inline-block h-4 w-4 rounded-full bg-red-400" />
-                    )}
-                    {validationResult.valid
-                      ? "全部校验通过"
-                      : `发现 ${validationResult.items.length} 个问题`}
-                  </div>
-                  <div className="mt-1 flex gap-3 text-xs">
-                    <span>YAML: {validationResult.yamlValid ? "✓" : "✗"}</span>
-                    <span>
-                      Schema: {validationResult.schemaValid ? "✓" : "✗"}
-                    </span>
-                  </div>
-                </div>
-                {validationResult.items.length > 0 && (
-                  <ul className="space-y-1 text-xs text-[var(--muted)]">
-                    {validationResult.items.map((item, i) => (
-                      <li
-                        className={`rounded border px-2 py-1.5 ${
-                          item.severity === "error"
-                            ? "border-red-200 bg-red-50"
-                            : "border-amber-200 bg-amber-50"
-                        }`}
-                        key={i}
-                      >
-                        <span className="font-mono text-[10px]">
-                          {item.path}
-                        </span>
-                        <span className="ml-2">{item.message}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                  <Download className="h-4 w-4" />
+                  导出 YAML
+                </button>
               </div>
-            )}
+            </div>
 
-            {/* Quality Score */}
-            {qualityScore && (
-              <div className="mt-4 space-y-3">
-                <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
-                  质量评分
-                </h3>
-                <div className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2">
-                  <div className="flex items-baseline gap-2 text-lg font-semibold">
-                    <span>{qualityScore.totalScore}</span>
-                    <span className="text-sm font-normal text-[var(--muted)]">
-                      / {qualityScore.totalMax}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
-                    <div
-                      className="h-2 rounded-full bg-emerald-500"
-                      style={{
-                        width: `${(qualityScore.totalScore / qualityScore.totalMax) * 100}%`,
-                      }}
-                    />
-                  </div>
+            <div className="space-y-6 px-5 py-5">
+              {hasEditedSinceValidation && (
+                <div className="rounded-md border border-[var(--warning-soft)] bg-[var(--warning-bg)] px-3 py-2 text-sm text-[var(--warning)]">
+                  修改已同步。导出前可以在高级信息里重新检查结构。
                 </div>
-                {qualityScore.dimensions.map((dim) => (
-                  <div
-                    className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
-                    key={dim.name}
-                  >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{dim.name}</span>
-                      <span className="text-xs text-[var(--muted)]">
-                        {dim.score} / {dim.maxScore}
-                      </span>
-                    </div>
-                    <div className="mt-1 space-y-0.5">
-                      {dim.checks.map((check) => (
-                        <div
-                          className="flex items-center gap-1.5 text-xs text-[var(--muted)]"
-                          key={check.label}
+              )}
+
+              <section>
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                  <BookOpen className="h-4 w-4" />
+                  章节
+                </h3>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {chapters.map((chapter) => (
+                    <article
+                      className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2"
+                      key={`${chapter.order}-${chapter.title}`}
+                    >
+                      <h4 className="text-sm font-medium">{chapter.title}</h4>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        {chapter.charCount} 字
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              {!editableDraft && (
+                <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--paper)] px-6 py-10 text-center">
+                  <Film className="mx-auto h-8 w-8 text-[var(--muted)]" />
+                  <h3 className="mt-3 text-base font-semibold">
+                    生成后在这里编辑剧本
+                  </h3>
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--muted)]">
+                    人物、场景和对白会以可读的剧本结构展示。YAML
+                    与检查信息保留在高级信息中。
+                  </p>
+                </section>
+              )}
+
+              {editableDraft && (
+                <>
+                  <section className="rounded-lg bg-[var(--paper)] px-4 py-4">
+                    <h3 className="text-sm font-semibold">故事主线</h3>
+                    <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                      {editableDraft.plot_summary.synopsis ||
+                        editableDraft.plot_summary.logline}
+                    </p>
+                  </section>
+
+                  <section>
+                    <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                      <Users className="h-4 w-4" />
+                      人物
+                    </h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {editableDraft.characters.map((character) => (
+                        <article
+                          className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-3"
+                          key={character.id}
                         >
-                          <span
-                            className={
-                              check.passed ? "text-emerald-500" : "text-red-400"
+                          <div className="flex items-center gap-2">
+                            <input
+                              aria-label="人物名称"
+                              className="min-w-0 flex-1 rounded-md border border-transparent bg-white px-2 py-1 text-sm font-medium outline-none focus:border-[var(--accent)]"
+                              onChange={(event) =>
+                                updateCharacterField(
+                                  character.id,
+                                  "name",
+                                  event.target.value,
+                                )
+                              }
+                              type="text"
+                              value={character.name}
+                            />
+                            <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-xs text-[var(--muted)]">
+                              {roleLabel[character.role] ?? character.role}
+                            </span>
+                          </div>
+                          <textarea
+                            aria-label="人物描述"
+                            className="mt-2 w-full resize-none rounded-md border border-transparent bg-white px-2 py-1 text-xs leading-5 outline-none focus:border-[var(--accent)]"
+                            onChange={(event) =>
+                              updateCharacterField(
+                                character.id,
+                                "description",
+                                event.target.value,
+                              )
                             }
-                          >
-                            {check.passed ? "✓" : "✗"}
-                          </span>
-                          {check.label}
-                        </div>
+                            rows={2}
+                            value={character.description}
+                          />
+                        </article>
                       ))}
                     </div>
+                  </section>
+
+                  <section>
+                    <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                      <Film className="h-4 w-4" />
+                      场景
+                    </h3>
+                    <div className="space-y-4">
+                      {editableDraft.scenes.map((scene, sceneIndex) => (
+                        <article
+                          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4"
+                          key={scene.id}
+                        >
+                          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                            <span className="rounded-full bg-[var(--surface-alt)] px-2.5 py-1 text-xs text-[var(--muted)]">
+                              场景 {sceneIndex + 1}
+                            </span>
+                            <input
+                              aria-label="场景标题"
+                              className="min-w-0 flex-1 rounded-md border border-transparent bg-[var(--surface-alt)] px-3 py-2 text-sm font-medium outline-none focus:border-[var(--accent)]"
+                              onChange={(event) =>
+                                updateSceneField(
+                                  scene.id,
+                                  "title",
+                                  event.target.value,
+                                )
+                              }
+                              type="text"
+                              value={scene.title}
+                            />
+                            <input
+                              aria-label="时间段"
+                              className="w-24 rounded-md border border-transparent bg-[var(--surface-alt)] px-3 py-2 text-xs outline-none focus:border-[var(--accent)]"
+                              onChange={(event) =>
+                                updateSceneField(
+                                  scene.id,
+                                  "time_of_day",
+                                  event.target.value,
+                                )
+                              }
+                              type="text"
+                              value={scene.time_of_day}
+                            />
+                          </div>
+                          <textarea
+                            aria-label="场景摘要"
+                            className="mt-3 w-full resize-none rounded-md border border-transparent bg-[var(--surface-alt)] px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--accent)]"
+                            onChange={(event) =>
+                              updateSceneField(
+                                scene.id,
+                                "summary",
+                                event.target.value,
+                              )
+                            }
+                            rows={2}
+                            value={scene.summary}
+                          />
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {scene.characters.map((characterId) => (
+                              <span
+                                className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs text-[var(--accent)]"
+                                key={characterId}
+                              >
+                                {characterNames.get(characterId) ?? characterId}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="mt-4 space-y-2">
+                            {scene.beats.map((beat, beatIndex) => (
+                              <div
+                                className="grid gap-2 md:grid-cols-[4rem_1fr]"
+                                key={`${scene.id}-beat-${beatIndex}`}
+                              >
+                                <span className="pt-2 text-xs text-[var(--muted)]">
+                                  {beatLabel(beat.type)}
+                                </span>
+                                <textarea
+                                  aria-label={`beat ${beatIndex + 1}`}
+                                  className="w-full resize-none rounded-md border border-[var(--border)] bg-[var(--paper)] px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--accent)]"
+                                  onChange={(event) =>
+                                    updateBeatContent(
+                                      scene.id,
+                                      beatIndex,
+                                      event.target.value,
+                                    )
+                                  }
+                                  rows={beat.content.length > 34 ? 2 : 1}
+                                  value={beat.content}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {showAdvanced && (
+                <section className="space-y-4 rounded-lg border border-[var(--border)] bg-[var(--surface-alt)] px-4 py-4">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h3 className="flex items-center gap-2 text-sm font-semibold">
+                        <Code2 className="h-4 w-4" />
+                        高级信息
+                      </h3>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        用于导出、结构检查和内部验收。
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-xs hover:bg-[var(--paper)]"
+                        disabled={isLoading || !scriptYaml}
+                        onClick={revalidate}
+                        type="button"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        检查结构
+                      </button>
+                      <button
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-xs hover:bg-[var(--paper)]"
+                        disabled={!scriptYaml}
+                        onClick={copyYaml}
+                        type="button"
+                      >
+                        <Clipboard className="h-4 w-4" />
+                        复制 YAML
+                      </button>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+
+                  {validationResult && (
+                    <div className="rounded-md bg-[var(--surface)] px-3 py-2 text-sm">
+                      <span className="font-medium">
+                        {validationResult.valid
+                          ? "结构完整，可导出"
+                          : `发现 ${validationResult.items.length} 个结构问题`}
+                      </span>
+                      {validationResult.items.length > 0 && (
+                        <ul className="mt-2 space-y-1 text-xs text-[var(--muted)]">
+                          {validationResult.items.map((item, index) => (
+                            <li key={`${item.path}-${index}`}>
+                              <span className="font-mono">{item.path}</span>
+                              <span className="ml-2">{item.message}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {qualityScore && (
+                    <div className="rounded-md bg-[var(--surface)] px-3 py-2 text-sm">
+                      内部评分：{qualityScore.totalScore} /{" "}
+                      {qualityScore.totalMax}
+                    </div>
+                  )}
+
+                  <pre className="max-h-72 overflow-auto rounded-md bg-[var(--paper)] px-3 py-3 text-xs leading-5 text-[var(--foreground)]">
+                    <code>{scriptYaml}</code>
+                  </pre>
+                </section>
+              )}
+            </div>
+          </section>
+        </div>
       </section>
     </main>
   );
