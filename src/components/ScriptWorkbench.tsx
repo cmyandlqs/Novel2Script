@@ -75,6 +75,12 @@ type ApiConfigState = {
   model: string;
 };
 
+type ServerApiConfig = {
+  hasServerApiKey: boolean;
+  baseURL: string;
+  model: string;
+};
+
 function readStoredApiConfig(): ApiConfigState {
   if (typeof window === "undefined") {
     return { baseUrl: "", apiKey: "", model: "" };
@@ -154,12 +160,14 @@ function ApiConfigPanel({
   initialBaseUrl,
   initialApiKey,
   initialModel,
+  serverConfig,
   onSave,
   onClose,
 }: {
   initialBaseUrl: string;
   initialApiKey: string;
   initialModel: string;
+  serverConfig: ServerApiConfig | null;
   onSave: (baseUrl: string, apiKey: string, model: string) => void;
   onClose: () => void;
 }) {
@@ -194,7 +202,7 @@ function ApiConfigPanel({
           <div>
             <h2 className="text-base font-semibold">大模型 API 配置</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              配置后生成剧本时使用真实 LLM，留空则使用 Mock 模式。
+              可在这里临时覆盖服务端配置；留空则使用服务端 .env 或 Mock 模式。
             </p>
           </div>
           <button
@@ -207,15 +215,27 @@ function ApiConfigPanel({
         </div>
 
         <div className="space-y-4 px-5 py-4">
+          <div className="rounded-md border border-[var(--border)] bg-[var(--paper)] px-3 py-2 text-xs leading-5 text-[var(--muted)]">
+            {serverConfig?.hasServerApiKey
+              ? `服务端 .env 已配置，将默认使用 ${serverConfig.model}。`
+              : "服务端 .env 未配置；如不填写 API Key，将使用 Mock 模式。"}
+          </div>
+
           <div>
             <label className="mb-1.5 block text-sm font-medium">
               API Key
-              <span className="ml-1 text-xs text-[var(--muted)]">必填</span>
+              <span className="ml-1 text-xs text-[var(--muted)]">
+                {serverConfig?.hasServerApiKey ? "可选" : "必填"}
+              </span>
             </label>
             <input
               className="w-full rounded-md border border-[var(--border)] bg-[var(--paper)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
+              placeholder={
+                serverConfig?.hasServerApiKey
+                  ? "留空使用服务端 .env 中的 API Key"
+                  : "sk-..."
+              }
               type="password"
               value={apiKey}
             />
@@ -232,7 +252,7 @@ function ApiConfigPanel({
             <input
               className="w-full rounded-md border border-[var(--border)] bg-[var(--paper)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
               onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="https://api.openai.com/v1"
+              placeholder={serverConfig?.baseURL ?? "https://api.openai.com/v1"}
               type="url"
               value={baseUrl}
             />
@@ -246,7 +266,7 @@ function ApiConfigPanel({
             <input
               className="w-full rounded-md border border-[var(--border)] bg-[var(--paper)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
               onChange={(e) => setModel(e.target.value)}
-              placeholder="deepseek-v4-flash"
+              placeholder={serverConfig?.model ?? "deepseek-v4-flash"}
               type="text"
               value={model}
             />
@@ -294,9 +314,32 @@ export function ScriptWorkbench() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showApiConfig, setShowApiConfig] = useState(false);
   const [apiConfig, setApiConfig] = useState(readStoredApiConfig);
+  const [serverApiConfig, setServerApiConfig] =
+    useState<ServerApiConfig | null>(null);
   const apiBaseUrl = apiConfig.baseUrl;
   const apiKey = apiConfig.apiKey;
   const apiModel = apiConfig.model;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetch("/api/config")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: ServerApiConfig | null) => {
+        if (!cancelled && data) {
+          setServerApiConfig(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setServerApiConfig(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadApiConfig = useCallback(() => {
     setApiConfig(readStoredApiConfig());
@@ -319,6 +362,7 @@ export function ScriptWorkbench() {
   );
 
   const hasApiConfig = apiKey.length > 0;
+  const hasServerApiConfig = Boolean(serverApiConfig?.hasServerApiKey);
 
   const chapterResult = useMemo(() => parseChapters(novelText), [novelText]);
   const chapters = chapterResult.chapters;
@@ -680,7 +724,7 @@ export function ScriptWorkbench() {
             </label>
             <button
               className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-[var(--surface-alt)] ${
-                hasApiConfig
+                hasApiConfig || hasServerApiConfig
                   ? "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]"
                   : "border-[var(--border)] bg-[var(--surface)]"
               }`}
@@ -692,7 +736,11 @@ export function ScriptWorkbench() {
               type="button"
             >
               <Settings2 className="h-4 w-4" />
-              {hasApiConfig ? "模型已配置" : "模型设置"}
+              {hasApiConfig
+                ? "模型已配置"
+                : hasServerApiConfig
+                  ? "服务端模型"
+                  : "模型设置"}
             </button>
             <button
               className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-55"
@@ -1081,6 +1129,7 @@ export function ScriptWorkbench() {
           initialBaseUrl={apiBaseUrl}
           initialApiKey={apiKey}
           initialModel={apiModel}
+          serverConfig={serverApiConfig}
           onSave={(baseUrl, key, model) => {
             saveApiConfig(baseUrl, key, model);
             setShowApiConfig(false);
