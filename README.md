@@ -14,10 +14,11 @@ AI 小说转剧本工具。项目面向小说作者，目标是把小说文本�
 - 章节解析，支持 1 章试用生成，并支持 3+ 章节竞赛 Demo。
 - 多阶段生成 Pipeline（章节摘要 → 人物抽取 → 地点抽取 → 剧情梗概 → 场景拆分 → 改编说明）。
 - 真实流式生成反馈，前端能看到每个 Pipeline 步骤的开始、完成和错误状态。
-- Mock Provider（无需 API Key 即可演示）和 OpenAI 兼容 Provider（配置 API Key 后使用真实模型）。
+- Mock Provider（无需 API Key 即可演示）和 OpenAI 兼容 Provider。
+- 前端大模型 API 配置面板（localStorage 持久化，热切换无需重启）。
+- 文本上传入口，支持 `.txt`、`.md`、`.markdown`，自动检测 UTF-8 / GB18030 / GBK 编码。
 - YAML 解析校验、Schema 校验（AJV）、业务规则校验（引用一致性、章节覆盖）。
 - 质量评分面板（赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
-- 文本上传入口，支持 `.txt`、`.md`、`.markdown`。
 - 可编辑剧本工作台：人物名称/描述、场景标题/摘要/时间段、beat 内容均可直接编辑，修改后 YAML 实时同步，并提示重新校验后导出。
 
 后续阶段会完善示例数据、Demo 视频和最终提交。
@@ -55,7 +56,7 @@ src/lib/chapters/        # 章节解析与输入校验
 src/lib/ai/              # AI Provider 接口、Mock Provider 和 Pipeline 编排
 src/lib/validation/      # YAML 校验、Schema 校验和质量评分
 schemas/                 # 剧本 YAML Schema
-examples/                # 原创小说输入样例和 YAML 输出样例
+examples/                # 小说输入样例和 YAML 输出样例
 docs/                    # 竞赛文档、开发计划、技术选型和项目状态
 ```
 
@@ -117,9 +118,22 @@ OPENAI_MODEL=deepseek-v4-flash
 - 章节解析模块（支持中文/英文章节标题格式）。
 - 多阶段生成 Pipeline 架构（GenerationProvider 接口 + MockProvider + OpenAIProvider）。
 - 基于 SSE 的真实流式步骤反馈。
+- 前端大模型 API 配置面板（localStorage 持久化，热切换无需重启）。
+- 多编码文件上传（UTF-8 / GB18030 / GBK 自动检测）。
 - YAML 校验模块（语法校验 + Schema 校验 + 业务规则校验）。
 - 质量评分面板（5 个维度：赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
 - 面向小说转剧本流程的工作台页面（含 Pipeline 步骤展示、中间产物、校验结果和评分）。
+
+## YAML Schema
+
+剧本输出契约位于 [`schemas/script.schema.json`](schemas/script.schema.json)，字段设计原因见 [`docs/YAML_Schema设计说明.md`](docs/YAML_Schema设计说明.md)。
+
+## 示例输入与输出
+
+- 原创示例：[`examples/sample-novel.md`](examples/sample-novel.md) → [`examples/output-script.yaml`](examples/output-script.yaml)
+- 3+ 章节示例：[`examples/zhe-tian-chapter-1-3.md`](examples/zhe-tian-chapter-1-3.md) → [`examples/zhe-tian-output.yaml`](examples/zhe-tian-output.yaml)（辰东《遮天》前三章，仅作演示）
+
+示例文件说明见 [`examples/README.md`](examples/README.md)。
 
 ## Demo 视频
 
