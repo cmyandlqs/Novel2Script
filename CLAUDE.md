@@ -22,10 +22,10 @@
 ## 当前开发状态
 
 - 当前阶段：阶段 8：README、视频和最终提交
-- 当前状态：最终提交准备中，Demo 体验优化已完成（PR #15）
+- 当前状态：最终提交准备中，Demo 视频和工作台截图已加入仓库
 - 上一阶段：阶段 7：示例数据与可复现 Demo，已完成
-- 下一步入口：补充 Demo 视频链接，最终检查 README，按竞赛时间公开仓库
-- 最近合并 PR：#15 `feat: add streaming workbench feedback`
+- 下一步入口：最终检查 README，处理最终公开前风险项，按竞赛时间公开仓库
+- 最近合并 PR：#23 `fix: address final review and naming issues`
 
 ## 竞赛硬约束
 
@@ -139,6 +139,9 @@
 ├── examples/
 │   ├── sample-novel.md          # 原创 3 章节小说输入样例
 │   └── output-script.yaml       # 符合 Schema 的剧本 YAML 输出样例
+├── assets/
+│   ├── demo.mp4                 # 竞赛 Demo 视频
+│   └── novel2script-workbench.png # 前端工作台截图
 └── docs/
     ├── YAML_Schema设计说明.md   # Schema 字段设计原因与边界说明
     ├── 项目状态.md              # 当前阶段、阶段验收项和状态维护规则
