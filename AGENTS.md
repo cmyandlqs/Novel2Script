@@ -1,4 +1,4 @@
-# Noverl2Script 项目说明
+# Novel2Script 项目说明
 
 ## 项目用途
 
@@ -10,11 +10,11 @@
 
 ## 仓库信息
 
-- GitHub 仓库：https://github.com/cmyandlqs/Noverl2Script
+- GitHub 仓库：https://github.com/cmyandlqs/Novel2Script
 - 当前可见性：`PRIVATE`
 - 可见性规则：开发阶段保持私有；等竞赛规定的公开时间或提交截止后，再切换为公开以供评审访问。
 - 远程名：`origin`
-- 远程地址：`git@github.com:cmyandlqs/Noverl2Script.git`
+- 远程地址：`git@github.com:cmyandlqs/Novel2Script.git`
 - 主分支：`main`
 - 首次提交：`e04003d docs: add competition constraints`
 - 首次 push 状态：已推送到 `origin/main`
@@ -167,4 +167,4 @@ tests/                # 跨模块测试或端到端测试
 - 任何第三方依赖都要同步记录到 README。
 - 任何生成的 YAML 输出结构都要能对应到后续提交的 YAML Schema。
 - 发现竞赛硬约束与实现方案冲突时，优先满足竞赛硬约束。
-- 任何时候都要保持/home/sikm/Competition/Noverl2Script/CLAUDE.md和/home/sikm/Competition/Noverl2Script/AGENTS.md内容一致
+- 任何时候都要保持根目录的 `CLAUDE.md` 和 `AGENTS.md` 内容一致

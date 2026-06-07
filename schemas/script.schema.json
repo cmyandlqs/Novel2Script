@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/cmyandlqs/Noverl2Script/schemas/script.schema.json",
-  "title": "Noverl2Script YAML Script Schema",
+  "$id": "https://github.com/cmyandlqs/Novel2Script/schemas/script.schema.json",
+  "title": "Novel2Script YAML Script Schema",
   "description": "Schema for an editable YAML screenplay draft generated from one or more novel chapters. Competition demos should use three or more chapters.",
   "type": "object",
   "additionalProperties": false,

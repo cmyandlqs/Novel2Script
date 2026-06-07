@@ -52,8 +52,10 @@ const generationStepList: { step: PipelineStepName; label: string }[] = [
   { step: "adaptation_notes", label: "生成建议" },
 ];
 
-const apiConfigStorageKey = "noverl2script-api-config";
-const apiKeySessionStorageKey = "noverl2script-api-key";
+const apiConfigStorageKey = "novel2script-api-config";
+const apiKeySessionStorageKey = "novel2script-api-key";
+const legacyApiConfigStorageKey = "noverl2script-api-config";
+const legacyApiKeySessionStorageKey = "noverl2script-api-key";
 
 type GenerationStepView = {
   step: PipelineStepName;
@@ -87,9 +89,13 @@ function readStoredApiConfig(): ApiConfigState {
   }
 
   try {
-    const saved = window.localStorage.getItem(apiConfigStorageKey);
+    const saved =
+      window.localStorage.getItem(apiConfigStorageKey) ??
+      window.localStorage.getItem(legacyApiConfigStorageKey);
     let sessionApiKey =
-      window.sessionStorage.getItem(apiKeySessionStorageKey) ?? "";
+      window.sessionStorage.getItem(apiKeySessionStorageKey) ??
+      window.sessionStorage.getItem(legacyApiKeySessionStorageKey) ??
+      "";
     let baseUrl = "";
     let model = "";
 
@@ -109,7 +115,13 @@ function readStoredApiConfig(): ApiConfigState {
           apiConfigStorageKey,
           JSON.stringify({ baseUrl, model }),
         );
+        window.localStorage.removeItem(legacyApiConfigStorageKey);
       }
+    }
+
+    if (sessionApiKey) {
+      window.sessionStorage.setItem(apiKeySessionStorageKey, sessionApiKey);
+      window.sessionStorage.removeItem(legacyApiKeySessionStorageKey);
     }
 
     return { baseUrl, apiKey: sessionApiKey, model };
@@ -354,9 +366,12 @@ export function ScriptWorkbench() {
       );
       if (key.trim()) {
         sessionStorage.setItem(apiKeySessionStorageKey, key);
+        sessionStorage.removeItem(legacyApiKeySessionStorageKey);
       } else {
         sessionStorage.removeItem(apiKeySessionStorageKey);
+        sessionStorage.removeItem(legacyApiKeySessionStorageKey);
       }
+      localStorage.removeItem(legacyApiConfigStorageKey);
     },
     [],
   );
@@ -695,7 +710,7 @@ export function ScriptWorkbench() {
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-[var(--accent)]" />
-              <h1 className="text-xl font-semibold">Noverl2Script</h1>
+              <h1 className="text-xl font-semibold">Novel2Script</h1>
             </div>
             <p className="mt-1 text-sm text-[var(--muted)]">
               AI 小说剧本改编工作台
