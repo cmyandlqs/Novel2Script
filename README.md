@@ -88,18 +88,33 @@ OPENAI_BASE_URL=https://opencode.ai/zen/go/v1
 OPENAI_MODEL=deepseek-v4-flash
 ```
 
-## 原创功能说明
+## 架构与 Pipeline
 
-当前原创部分包括：
+整体采用 **输入解析 → 多阶段 AI Pipeline → Schema 校验 → 可编辑工作台** 的闭环架构，由四层组成：
 
-- YAML 剧本 Schema 设计。
-- 原创三章节小说样例《雨夜档案》。
-- 对应的结构化 YAML 剧本样例。
-- 章节解析模块（支持中文/英文章节标题格式）。
-- 多阶段生成 Pipeline 架构（GenerationProvider 接口 + MockProvider + OpenAIProvider）。
-- 基于 SSE 的真实流式步骤反馈。
-- 前端大模型 API 配置面板（服务端模型状态展示，支持会话级 API Key 覆盖）。
-- 多编码文件上传（UTF-8 / GB18030 / GBK 自动检测）。
-- YAML 校验模块（语法校验 + Schema 校验 + 业务规则校验）。
-- 质量评分面板（5 个维度：赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
-- 面向小说转剧本流程的工作台页面（含 Pipeline 步骤展示、中间产物、校验结果和评分）。
+**1. 输入层**：章节解析模块覆盖中文 `第N章` / 汉字数字 / `Chapter N` / Markdown 标题等多种格式，文件上传自动识别 UTF-8 / GB18030 / GBK 编码，降低小说作者的导入摩擦。
+
+**2. AI Pipeline 层（核心闪光点）**：把“小说→剧本”这种一次性大任务拆分为 6 个串行子任务，每一步只解决一个问题，并把上游结构化产物作为下游输入。
+
+```text
+章节摘要 → 人物抽取 → 地点抽取 → 剧情梗概 → 场景拆分 → 改编说明
+```
+
+- **结构化上下文传递**：场景拆分使用上一步抽取的人物 / 地点列表作为可选实体集合，从源头保证 `scene.characters` 与 `characters[].id` 引用一致。
+- **步骤级错误隔离**：任一步失败时下游自动跳过并标记状态，避免单点错误污染整张剧本；同时返回完整 step 日志便于排查。
+- **结果规范化兜底**：`normalizeScenes` 会过滤无效角色引用、回退到对白说话人或首位角色，确保即使模型输出漂移也能产出合规 YAML。
+- **真实 SSE 流式反馈**：每个步骤的开始 / 完成 / 错误状态实时推送到前端，用户能看到 AI 在做什么，而不是面对一个加载圈。
+
+**3. Provider 抽象层**：`GenerationProvider` 接口将 Pipeline 与具体模型解耦，内置 `MockProvider`（零成本演示）和 `OpenAIProvider`（OpenAI 兼容协议），切换无需改动业务代码；前端配置面板支持会话级 API Key / Base URL / Model 覆盖，不需重启服务。
+
+**4. 校验与质量层**：
+
+- AJV (JSON Schema draft 2020-12) 做结构校验 + 自研业务规则校验（引用一致性、章节覆盖率）。
+- 5 维质量评分面板（赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度），让作者直观判断初稿是否可用。
+- 工作台支持人物、场景、beat 的直接编辑，YAML 实时同步并提示重新校验。
+
+## 原创内容清单
+
+- `schemas/script.schema.json` 剧本 YAML Schema 及 `docs/YAML_Schema设计说明.md` 字段设计说明。
+- 原创三章节小说样例《雨夜档案》及其对应的结构化 YAML 剧本样例。
+- 上述四层架构与 6 阶段 Pipeline 的全部实现代码，包括 `GenerationProvider` 抽象、`MockProvider`、`OpenAIProvider`、SSE 流式接口、章节解析、Schema 校验、业务规则校验、质量评分模块和工作台前端。
