@@ -1,16 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseChapters } from "@/lib/chapters/parseChapters";
-import { MockProvider } from "@/lib/ai/mockProvider";
-import { OpenAIProvider } from "@/lib/ai/openaiProvider";
 import { runPipeline } from "@/lib/ai/pipeline";
-import type { GenerationProvider } from "@/lib/ai/provider";
-
-function createProvider(): GenerationProvider {
-  if (process.env.OPENAI_API_KEY) {
-    return new OpenAIProvider();
-  }
-  return new MockProvider();
-}
+import { createProvider, type RuntimeApiConfig } from "@/lib/ai/createProvider";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -23,34 +14,25 @@ export async function POST(request: Request) {
     );
   }
 
-  const { novelText, title } = body as {
+  const { novelText, title, apiConfig } = body as {
     novelText?: string;
     title?: string;
+    apiConfig?: RuntimeApiConfig;
   };
 
   if (!novelText || typeof novelText !== "string") {
-    return NextResponse.json(
-      { error: "缺少小说文本输入。" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "缺少小说文本输入。" }, { status: 400 });
   }
 
   const parseResult = parseChapters(novelText);
   if (!parseResult.isValid) {
-    return NextResponse.json(
-      { error: parseResult.errors[0] },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: parseResult.errors[0] }, { status: 400 });
   }
 
   try {
-    const provider = createProvider();
+    const provider = createProvider(apiConfig);
     const safeTitle = (title ?? "未命名作品").slice(0, 200);
-    const result = await runPipeline(
-      provider,
-      parseResult.chapters,
-      safeTitle,
-    );
+    const result = await runPipeline(provider, parseResult.chapters, safeTitle);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

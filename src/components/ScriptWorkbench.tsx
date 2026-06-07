@@ -17,7 +17,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { parseChapters } from "@/lib/chapters/parseChapters";
 import type {
   PipelineResult,
@@ -52,6 +52,9 @@ const generationStepList: { step: PipelineStepName; label: string }[] = [
   { step: "adaptation_notes", label: "生成建议" },
 ];
 
+const apiConfigStorageKey = "noverl2script-api-config";
+const apiKeySessionStorageKey = "noverl2script-api-key";
+
 type GenerationStepView = {
   step: PipelineStepName;
   label: string;
@@ -65,6 +68,49 @@ type StreamCompletePayload = PipelineResult & {
   validation: DraftValidationResult;
   qualityScore: QualityScore | null;
 };
+
+type ApiConfigState = {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+};
+
+function readStoredApiConfig(): ApiConfigState {
+  if (typeof window === "undefined") {
+    return { baseUrl: "", apiKey: "", model: "" };
+  }
+
+  try {
+    const saved = window.localStorage.getItem(apiConfigStorageKey);
+    let sessionApiKey =
+      window.sessionStorage.getItem(apiKeySessionStorageKey) ?? "";
+    let baseUrl = "";
+    let model = "";
+
+    if (saved) {
+      const parsed = JSON.parse(saved) as {
+        baseUrl?: string;
+        apiKey?: string;
+        model?: string;
+      };
+      baseUrl = parsed.baseUrl ?? "";
+      model = parsed.model ?? "";
+
+      if (parsed.apiKey) {
+        sessionApiKey = parsed.apiKey;
+        window.sessionStorage.setItem(apiKeySessionStorageKey, parsed.apiKey);
+        window.localStorage.setItem(
+          apiConfigStorageKey,
+          JSON.stringify({ baseUrl, model }),
+        );
+      }
+    }
+
+    return { baseUrl, apiKey: sessionApiKey, model };
+  } catch {
+    return { baseUrl: "", apiKey: "", model: "" };
+  }
+}
 
 function createInitialGenerationSteps(): GenerationStepView[] {
   return generationStepList.map((step) => ({
@@ -121,14 +167,28 @@ function ApiConfigPanel({
   const [apiKey, setApiKey] = useState(initialApiKey);
   const [model, setModel] = useState(initialModel);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
       onClick={onClose}
+      role="presentation"
     >
       <div
+        aria-modal="true"
         className="mx-4 w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
       >
         <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
           <div>
@@ -159,6 +219,9 @@ function ApiConfigPanel({
               type="password"
               value={apiKey}
             />
+            <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
+              API Key 仅保存在当前浏览器会话中，关闭标签页后需要重新填写。
+            </p>
           </div>
 
           <div>
@@ -230,35 +293,27 @@ export function ScriptWorkbench() {
     useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showApiConfig, setShowApiConfig] = useState(false);
-  const [apiBaseUrl, setApiBaseUrl] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [apiModel, setApiModel] = useState("");
+  const [apiConfig, setApiConfig] = useState(readStoredApiConfig);
+  const apiBaseUrl = apiConfig.baseUrl;
+  const apiKey = apiConfig.apiKey;
+  const apiModel = apiConfig.model;
 
   const loadApiConfig = useCallback(() => {
-    try {
-      const saved = localStorage.getItem("noverl2script-api-config");
-      if (saved) {
-        const parsed = JSON.parse(saved) as {
-          baseUrl?: string;
-          apiKey?: string;
-          model?: string;
-        };
-        setApiBaseUrl(parsed.baseUrl ?? "");
-        setApiKey(parsed.apiKey ?? "");
-        setApiModel(parsed.model ?? "");
-      }
-    } catch {}
+    setApiConfig(readStoredApiConfig());
   }, []);
 
   const saveApiConfig = useCallback(
     (baseUrl: string, key: string, model: string) => {
-      setApiBaseUrl(baseUrl);
-      setApiKey(key);
-      setApiModel(model);
+      setApiConfig({ baseUrl, apiKey: key, model });
       localStorage.setItem(
-        "noverl2script-api-config",
-        JSON.stringify({ baseUrl, apiKey: key, model }),
+        apiConfigStorageKey,
+        JSON.stringify({ baseUrl, model }),
       );
+      if (key.trim()) {
+        sessionStorage.setItem(apiKeySessionStorageKey, key);
+      } else {
+        sessionStorage.removeItem(apiKeySessionStorageKey);
+      }
     },
     [],
   );
@@ -351,13 +406,23 @@ export function ScriptWorkbench() {
     }
   }
 
-  async function runValidation(yaml: string) {
+  async function runValidation(yaml: string): Promise<boolean> {
     try {
       const response = await fetch("/api/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ yamlText: yaml }),
       });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        console.error(data?.error ?? "结构检查接口返回失败");
+        setValidationResult(null);
+        setQualityScore(null);
+        setHasEditedSinceValidation(true);
+        return false;
+      }
       const data = (await response.json()) as {
         validation: DraftValidationResult;
         qualityScore: QualityScore | null;
@@ -365,9 +430,13 @@ export function ScriptWorkbench() {
       setValidationResult(data.validation);
       setQualityScore(data.qualityScore);
       setHasEditedSinceValidation(false);
+      return true;
     } catch {
+      console.error("结构检查请求失败");
       setValidationResult(null);
       setQualityScore(null);
+      setHasEditedSinceValidation(true);
+      return false;
     }
   }
 
@@ -390,7 +459,11 @@ export function ScriptWorkbench() {
         body: JSON.stringify({
           novelText,
           apiConfig: hasApiConfig
-            ? { apiKey, baseURL: apiBaseUrl || undefined, model: apiModel || undefined }
+            ? {
+                apiKey,
+                baseURL: apiBaseUrl || undefined,
+                model: apiModel || undefined,
+              }
             : undefined,
         }),
       });
@@ -502,9 +575,12 @@ export function ScriptWorkbench() {
     if (!scriptYaml) return;
     setIsLoading(true);
     setStatus("正在检查当前结构...");
-    await runValidation(scriptYaml);
-    setStatus("结构检查完成");
-    setIsLoading(false);
+    try {
+      const ok = await runValidation(scriptYaml);
+      setStatus(ok ? "结构检查完成" : "检查失败，请重试");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function updateCharacterField(
@@ -909,23 +985,23 @@ export function ScriptWorkbench() {
                         用于导出、结构检查和内部验收。
                       </p>
                     </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-[var(--surface-alt)] ${
-                hasApiConfig
-                  ? "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]"
-                  : "border-[var(--border)] bg-[var(--surface)]"
-              }`}
-              onClick={() => {
-                loadApiConfig();
-                setShowApiConfig(true);
-              }}
-              title="大模型 API 配置"
-              type="button"
-            >
-              <Settings2 className="h-4 w-4" />
-              {hasApiConfig ? "已配置" : "设置"}
-            </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-[var(--surface-alt)] ${
+                          hasApiConfig
+                            ? "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]"
+                            : "border-[var(--border)] bg-[var(--surface)]"
+                        }`}
+                        onClick={() => {
+                          loadApiConfig();
+                          setShowApiConfig(true);
+                        }}
+                        title="大模型 API 配置"
+                        type="button"
+                      >
+                        <Settings2 className="h-4 w-4" />
+                        {hasApiConfig ? "已配置" : "设置"}
+                      </button>
                       <button
                         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-xs hover:bg-[var(--paper)]"
                         disabled={isLoading || !scriptYaml}
