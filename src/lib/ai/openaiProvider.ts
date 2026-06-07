@@ -18,21 +18,30 @@ import {
   buildSceneSplitPrompt,
 } from "./prompts";
 
+export interface OpenAIProviderConfig {
+  apiKey: string;
+  baseURL?: string;
+  model?: string;
+}
+
 export class OpenAIProvider implements GenerationProvider {
   name = "openai";
   private client: OpenAI;
   private model: string;
 
-  constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
+  constructor(config?: OpenAIProviderConfig) {
+    const apiKey = config?.apiKey ?? process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY 环境变量未设置。");
+      throw new Error("未提供 API Key。可在页面设置面板或 .env 中配置。");
     }
     this.client = new OpenAI({
       apiKey,
-      baseURL: process.env.OPENAI_BASE_URL ?? "https://opencode.ai/zen/go/v1",
+      baseURL:
+        config?.baseURL ??
+        process.env.OPENAI_BASE_URL ??
+        "https://opencode.ai/zen/go/v1",
     });
-    this.model = process.env.OPENAI_MODEL ?? "deepseek-v4-flash";
+    this.model = config?.model ?? process.env.OPENAI_MODEL ?? "deepseek-v4-flash";
   }
 
   private async callLlm(

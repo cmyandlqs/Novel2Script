@@ -8,7 +8,16 @@ import type { GenerationProvider } from "@/lib/ai/provider";
 import { validateDraft } from "@/lib/validation/validateDraft";
 import { scoreDraft } from "@/lib/validation/scoreDraft";
 
-function createProvider(): GenerationProvider {
+function createProvider(
+  apiConfig?: { apiKey?: string; baseURL?: string; model?: string },
+): GenerationProvider {
+  if (apiConfig?.apiKey) {
+    return new OpenAIProvider({
+      apiKey: apiConfig.apiKey,
+      baseURL: apiConfig.baseURL,
+      model: apiConfig.model,
+    });
+  }
   if (process.env.OPENAI_API_KEY) {
     return new OpenAIProvider();
   }
@@ -30,9 +39,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const { novelText, title } = body as {
+  const { novelText, title, apiConfig } = body as {
     novelText?: string;
     title?: string;
+    apiConfig?: { apiKey?: string; baseURL?: string; model?: string };
   };
 
   if (!novelText || typeof novelText !== "string") {
@@ -53,7 +63,7 @@ export async function POST(request: Request) {
       };
 
       try {
-        const provider = createProvider();
+        const provider = createProvider(apiConfig);
         const safeTitle = (title ?? "未命名作品").slice(0, 200);
         send("pipeline_start", {
           total_steps: 6,
