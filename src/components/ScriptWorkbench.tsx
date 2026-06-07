@@ -15,8 +15,9 @@ import {
   Settings2,
   Sparkles,
   Users,
+  X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { parseChapters } from "@/lib/chapters/parseChapters";
 import type {
   PipelineResult,
@@ -103,6 +104,113 @@ function beatLabel(type: string): string {
   return "转场";
 }
 
+function ApiConfigPanel({
+  initialBaseUrl,
+  initialApiKey,
+  initialModel,
+  onSave,
+  onClose,
+}: {
+  initialBaseUrl: string;
+  initialApiKey: string;
+  initialModel: string;
+  onSave: (baseUrl: string, apiKey: string, model: string) => void;
+  onClose: () => void;
+}) {
+  const [baseUrl, setBaseUrl] = useState(initialBaseUrl);
+  const [apiKey, setApiKey] = useState(initialApiKey);
+  const [model, setModel] = useState(initialModel);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="mx-4 w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+          <div>
+            <h2 className="text-base font-semibold">大模型 API 配置</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              配置后生成剧本时使用真实 LLM，留空则使用 Mock 模式。
+            </p>
+          </div>
+          <button
+            className="rounded-md p-1.5 text-[var(--muted)] hover:bg-[var(--surface-alt)]"
+            onClick={onClose}
+            type="button"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-5 py-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              API Key
+              <span className="ml-1 text-xs text-[var(--muted)]">必填</span>
+            </label>
+            <input
+              className="w-full rounded-md border border-[var(--border)] bg-[var(--paper)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="sk-..."
+              type="password"
+              value={apiKey}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Base URL
+              <span className="ml-1 text-xs text-[var(--muted)]">选填</span>
+            </label>
+            <input
+              className="w-full rounded-md border border-[var(--border)] bg-[var(--paper)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="https://api.openai.com/v1"
+              type="url"
+              value={baseUrl}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Model
+              <span className="ml-1 text-xs text-[var(--muted)]">选填</span>
+            </label>
+            <input
+              className="w-full rounded-md border border-[var(--border)] bg-[var(--paper)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="deepseek-v4-flash"
+              type="text"
+              value={model}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-3">
+          <button
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] px-3 text-sm hover:bg-[var(--surface-alt)]"
+            onClick={onClose}
+            type="button"
+          >
+            取消
+          </button>
+          <button
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white hover:bg-[var(--accent-strong)]"
+            onClick={() => onSave(baseUrl, apiKey, model)}
+            type="button"
+          >
+            保存配置
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ScriptWorkbench() {
   const [novelText, setNovelText] = useState(fallbackNovel);
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(
@@ -121,6 +229,41 @@ export function ScriptWorkbench() {
   const [hasEditedSinceValidation, setHasEditedSinceValidation] =
     useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showApiConfig, setShowApiConfig] = useState(false);
+  const [apiBaseUrl, setApiBaseUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [apiModel, setApiModel] = useState("");
+
+  const loadApiConfig = useCallback(() => {
+    try {
+      const saved = localStorage.getItem("noverl2script-api-config");
+      if (saved) {
+        const parsed = JSON.parse(saved) as {
+          baseUrl?: string;
+          apiKey?: string;
+          model?: string;
+        };
+        setApiBaseUrl(parsed.baseUrl ?? "");
+        setApiKey(parsed.apiKey ?? "");
+        setApiModel(parsed.model ?? "");
+      }
+    } catch {}
+  }, []);
+
+  const saveApiConfig = useCallback(
+    (baseUrl: string, key: string, model: string) => {
+      setApiBaseUrl(baseUrl);
+      setApiKey(key);
+      setApiModel(model);
+      localStorage.setItem(
+        "noverl2script-api-config",
+        JSON.stringify({ baseUrl, apiKey: key, model }),
+      );
+    },
+    [],
+  );
+
+  const hasApiConfig = apiKey.length > 0;
 
   const chapterResult = useMemo(() => parseChapters(novelText), [novelText]);
   const chapters = chapterResult.chapters;
@@ -244,7 +387,12 @@ export function ScriptWorkbench() {
       const response = await fetch("/api/generate/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ novelText }),
+        body: JSON.stringify({
+          novelText,
+          apiConfig: hasApiConfig
+            ? { apiKey, baseURL: apiBaseUrl || undefined, model: apiModel || undefined }
+            : undefined,
+        }),
       });
 
       if (!response.ok) {
@@ -761,7 +909,23 @@ export function ScriptWorkbench() {
                         用于导出、结构检查和内部验收。
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-[var(--surface-alt)] ${
+                hasApiConfig
+                  ? "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]"
+                  : "border-[var(--border)] bg-[var(--surface)]"
+              }`}
+              onClick={() => {
+                loadApiConfig();
+                setShowApiConfig(true);
+              }}
+              title="大模型 API 配置"
+              type="button"
+            >
+              <Settings2 className="h-4 w-4" />
+              {hasApiConfig ? "已配置" : "设置"}
+            </button>
                       <button
                         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-xs hover:bg-[var(--paper)]"
                         disabled={isLoading || !scriptYaml}
@@ -819,6 +983,19 @@ export function ScriptWorkbench() {
           </section>
         </div>
       </section>
+
+      {showApiConfig && (
+        <ApiConfigPanel
+          initialBaseUrl={apiBaseUrl}
+          initialApiKey={apiKey}
+          initialModel={apiModel}
+          onSave={(baseUrl, key, model) => {
+            saveApiConfig(baseUrl, key, model);
+            setShowApiConfig(false);
+          }}
+          onClose={() => setShowApiConfig(false)}
+        />
+      )}
     </main>
   );
 }
