@@ -17,6 +17,7 @@ import {
   buildPlotSummaryPrompt,
   buildSceneSplitPrompt,
 } from "./prompts";
+import { defaultOpenAIBaseURL, defaultOpenAIModel } from "./defaults";
 
 export interface OpenAIProviderConfig {
   apiKey: string;
@@ -37,11 +38,10 @@ export class OpenAIProvider implements GenerationProvider {
     this.client = new OpenAI({
       apiKey,
       baseURL:
-        config?.baseURL ??
-        process.env.OPENAI_BASE_URL ??
-        "https://opencode.ai/zen/go/v1",
+        config?.baseURL ?? process.env.OPENAI_BASE_URL ?? defaultOpenAIBaseURL,
     });
-    this.model = config?.model ?? process.env.OPENAI_MODEL ?? "deepseek-v4-flash";
+    this.model =
+      config?.model ?? process.env.OPENAI_MODEL ?? defaultOpenAIModel;
   }
 
   private async callLlm(

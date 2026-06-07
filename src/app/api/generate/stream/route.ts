@@ -1,28 +1,10 @@
 import { NextResponse } from "next/server";
 import YAML from "yaml";
 import { parseChapters } from "@/lib/chapters/parseChapters";
-import { MockProvider } from "@/lib/ai/mockProvider";
-import { OpenAIProvider } from "@/lib/ai/openaiProvider";
 import { runPipeline } from "@/lib/ai/pipeline";
-import type { GenerationProvider } from "@/lib/ai/provider";
+import { createProvider, type RuntimeApiConfig } from "@/lib/ai/createProvider";
 import { validateDraft } from "@/lib/validation/validateDraft";
 import { scoreDraft } from "@/lib/validation/scoreDraft";
-
-function createProvider(
-  apiConfig?: { apiKey?: string; baseURL?: string; model?: string },
-): GenerationProvider {
-  if (apiConfig?.apiKey) {
-    return new OpenAIProvider({
-      apiKey: apiConfig.apiKey,
-      baseURL: apiConfig.baseURL,
-      model: apiConfig.model,
-    });
-  }
-  if (process.env.OPENAI_API_KEY) {
-    return new OpenAIProvider();
-  }
-  return new MockProvider();
-}
 
 function encodeSse(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -42,7 +24,7 @@ export async function POST(request: Request) {
   const { novelText, title, apiConfig } = body as {
     novelText?: string;
     title?: string;
-    apiConfig?: { apiKey?: string; baseURL?: string; model?: string };
+    apiConfig?: RuntimeApiConfig;
   };
 
   if (!novelText || typeof novelText !== "string") {
