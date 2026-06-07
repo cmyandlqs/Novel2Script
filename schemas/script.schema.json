@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/cmyandlqs/Noverl2Script/schemas/script.schema.json",
   "title": "Noverl2Script YAML Script Schema",
-  "description": "Schema for an editable YAML screenplay draft generated from three or more novel chapters.",
+  "description": "Schema for an editable YAML screenplay draft generated from one or more novel chapters. Competition demos should use three or more chapters.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,12 +17,7 @@
     "metadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "title",
-        "schema_version",
-        "draft_type",
-        "language"
-      ],
+      "required": ["title", "schema_version", "draft_type", "language"],
       "properties": {
         "title": {
           "type": "string",
@@ -34,9 +29,7 @@
         },
         "draft_type": {
           "type": "string",
-          "enum": [
-            "screenplay_draft"
-          ]
+          "enum": ["screenplay_draft"]
         },
         "language": {
           "type": "string",
@@ -61,18 +54,15 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "chapter_count",
-        "chapters"
-      ],
+      "required": ["chapter_count", "chapters"],
       "properties": {
         "chapter_count": {
           "type": "integer",
-          "minimum": 3
+          "minimum": 1
         },
         "chapters": {
           "type": "array",
-          "minItems": 3,
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/chapter"
           }
@@ -99,11 +89,7 @@
     "plot_summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "logline",
-        "synopsis",
-        "central_conflict"
-      ],
+      "required": ["logline", "synopsis", "central_conflict"],
       "properties": {
         "logline": {
           "type": "string",
@@ -148,12 +134,7 @@
     "chapter": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "title",
-        "order",
-        "summary"
-      ],
+      "required": ["id", "title", "order", "summary"],
       "properties": {
         "id": {
           "$ref": "#/$defs/id"
@@ -182,12 +163,7 @@
     "character": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "name",
-        "role",
-        "description"
-      ],
+      "required": ["id", "name", "role", "description"],
       "properties": {
         "id": {
           "$ref": "#/$defs/id"
@@ -221,11 +197,7 @@
     "location": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "name",
-        "description"
-      ],
+      "required": ["id", "name", "description"],
       "properties": {
         "id": {
           "$ref": "#/$defs/id"
@@ -303,19 +275,11 @@
     "beat": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type",
-        "content"
-      ],
+      "required": ["type", "content"],
       "properties": {
         "type": {
           "type": "string",
-          "enum": [
-            "action",
-            "dialogue",
-            "narration",
-            "transition"
-          ]
+          "enum": ["action", "dialogue", "narration", "transition"]
         },
         "speaker_id": {
           "$ref": "#/$defs/id"
@@ -342,14 +306,10 @@
                 "const": "dialogue"
               }
             },
-            "required": [
-              "type"
-            ]
+            "required": ["type"]
           },
           "then": {
-            "required": [
-              "speaker_id"
-            ]
+            "required": ["speaker_id"]
           }
         }
       ]
@@ -357,10 +317,7 @@
     "adaptation_note": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type",
-        "content"
-      ],
+      "required": ["type", "content"],
       "properties": {
         "type": {
           "type": "string",

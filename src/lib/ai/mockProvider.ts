@@ -58,7 +58,8 @@ export class MockProvider implements GenerationProvider {
   ): Promise<ScriptPlotSummary> {
     return {
       logline: "一个关于追寻真相的故事。",
-      synopsis: "主人公在偶然发现线索后，踏上了揭开谜团的旅程，最终面临意想不到的抉择。",
+      synopsis:
+        "主人公在偶然发现线索后，踏上了揭开谜团的旅程，最终面临意想不到的抉择。",
       central_conflict: "真相与隐瞒之间的冲突。",
       themes: ["真相", "选择", "成长"],
     };
@@ -72,7 +73,7 @@ export class MockProvider implements GenerationProvider {
     const fallbackCharId = characters[0]?.id ?? "character_001";
     const fallbackLocId = locations[0]?.id ?? "location_001";
 
-    return chapters.slice(0, 3).map((ch, i) => ({
+    return chapters.map((ch, i) => ({
       id: `scene_${String(i + 1).padStart(3, "0")}`,
       title: `场景 ${i + 1}`,
       chapter_source: [ch.id],

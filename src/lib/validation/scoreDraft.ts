@@ -29,7 +29,7 @@ export function scoreDraft(
   {
     const checks: DimensionCheck[] = [
       {
-        label: "章节数量 ≥ 3",
+        label: "竞赛 Demo 章节数量 ≥ 3",
         passed: draft.source.chapter_count >= 3,
       },
       {
@@ -61,20 +61,26 @@ export function scoreDraft(
       { label: "包含 characters", passed: draft.characters.length > 0 },
       { label: "包含 locations", passed: draft.locations.length > 0 },
       { label: "包含 plot_summary", passed: !!draft.plot_summary?.logline },
-      { label: "scenes 含 beats", passed: draft.scenes.every((s) => s.beats.length > 0) },
+      {
+        label: "scenes 含 beats",
+        passed: draft.scenes.every((s) => s.beats.length > 0),
+      },
       {
         label: "包含 adaptation_notes",
         passed: (draft.adaptation_notes?.length ?? 0) > 0,
       },
     ];
-    const score = Math.round((checks.filter((c) => c.passed).length / checks.length) * 20);
+    const score = Math.round(
+      (checks.filter((c) => c.passed).length / checks.length) * 20,
+    );
     dimensions.push({ name: "结构完整度", maxScore: 20, score, checks });
   }
 
   // 3. 可编辑性 (20)
   {
-    const hasStableIds = draft.characters.every((c) => /^character_\d{3}$/.test(c.id))
-      && draft.scenes.every((s) => /^scene_\d{3}$/.test(s.id));
+    const hasStableIds =
+      draft.characters.every((c) => /^character_\d{3}$/.test(c.id)) &&
+      draft.scenes.every((s) => /^scene_\d{3}$/.test(s.id));
     const hasDialogueWithSpeaker = draft.scenes.some((s) =>
       s.beats.some((b) => b.type === "dialogue" && b.speaker_id),
     );
@@ -129,11 +135,15 @@ export function scoreDraft(
     const coveredChapters = new Set(
       draft.scenes.flatMap((s) => s.chapter_source),
     );
-    const coverageRatio = chapIds.size > 0 ? coveredChapters.size / chapIds.size : 0;
+    const coverageRatio =
+      chapIds.size > 0 ? coveredChapters.size / chapIds.size : 0;
     const checks: DimensionCheck[] = [
       { label: "所有章节被场景覆盖", passed: coverageRatio >= 1 },
       { label: "至少覆盖 80% 章节", passed: coverageRatio >= 0.8 },
-      { label: "至少 3 个场景", passed: draft.scenes.length >= 3 },
+      {
+        label: "竞赛 Demo 建议至少 3 个场景",
+        passed: draft.scenes.length >= 3,
+      },
       {
         label: "每章至少有 1 个场景",
         passed: [...chapIds].every((id) => coveredChapters.has(id)),

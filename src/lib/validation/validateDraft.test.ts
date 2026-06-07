@@ -18,7 +18,12 @@ const validDraft = {
     ],
   },
   characters: [
-    { id: "character_001", name: "林舟", role: "protagonist", description: "主角" },
+    {
+      id: "character_001",
+      name: "林舟",
+      role: "protagonist",
+      description: "主角",
+    },
   ],
   locations: [
     { id: "location_001", name: "档案馆", description: "旧城区档案馆" },
@@ -55,6 +60,20 @@ describe("validateDraft", () => {
     expect(result.schemaValid).toBe(true);
     expect(result.valid).toBe(true);
     expect(result.items).toHaveLength(0);
+  });
+
+  it("allows one chapter as a structurally valid draft", () => {
+    const draft = structuredClone(validDraft);
+    draft.source.chapter_count = 1;
+    draft.source.chapters = [
+      { id: "chapter_001", title: "第一章", order: 1, summary: "摘要一" },
+    ];
+    const yamlText = YAML.stringify(draft);
+    const result = validateDraft(yamlText);
+
+    expect(result.yamlValid).toBe(true);
+    expect(result.schemaValid).toBe(true);
+    expect(result.valid).toBe(true);
   });
 
   it("detects invalid YAML syntax", () => {

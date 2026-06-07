@@ -22,9 +22,9 @@ export class OpenAIProvider implements GenerationProvider {
     }
     this.client = new OpenAI({
       apiKey,
-      baseURL: process.env.OPENAI_BASE_URL,
+      baseURL: process.env.OPENAI_BASE_URL ?? "https://opencode.ai/zen/go/v1",
     });
-    this.model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+    this.model = process.env.OPENAI_MODEL ?? "deepseek-v4-flash";
   }
 
   private async callLlm(
@@ -53,9 +53,7 @@ export class OpenAIProvider implements GenerationProvider {
     }
   }
 
-  async summarizeChapters(
-    chapters: ParsedChapter[],
-  ): Promise<ScriptChapter[]> {
+  async summarizeChapters(chapters: ParsedChapter[]): Promise<ScriptChapter[]> {
     const data = await this.callLlm(
       "你是一位专业的小说改编剧本助手。用户会提供多个章节，请为每个章节生成摘要和关键事件。返回 JSON 对象，包含一个 chapters 数组。输出内容使用中文。",
       `以下是小说章节：\n\n${formatChapters(chapters)}\n\n请为每个章节生成：\n1. summary：2-3 句话的内容摘要\n2. key_events：关键事件列表（短语）\n\n返回格式：{"chapters": [{"id": "chapter_001", "title": "...", "order": 1, "summary": "...", "key_events": ["事件1", "事件2"]}]}`,
@@ -77,9 +75,7 @@ export class OpenAIProvider implements GenerationProvider {
     return result.characters;
   }
 
-  async extractLocations(
-    chapters: ParsedChapter[],
-  ): Promise<ScriptLocation[]> {
+  async extractLocations(chapters: ParsedChapter[]): Promise<ScriptLocation[]> {
     const data = await this.callLlm(
       "你是一位专业的小说改编剧本助手。请从小说章节中提取所有重要地点。返回 JSON 对象，包含一个 locations 数组。输出内容使用中文。",
       `以下是小说章节：\n\n${formatChapters(chapters)}\n\n请提取所有重要地点，为每个地点提供：\n- id："location_NNN" 格式\n- name：地点名称\n- description：1-2 句描述\n\n返回格式：{"locations": [{"id": "location_001", "name": "...", "description": "..."}]}`,
@@ -110,12 +106,8 @@ export class OpenAIProvider implements GenerationProvider {
     characters: ScriptCharacter[],
     locations: ScriptLocation[],
   ): Promise<ScriptScene[]> {
-    const characterIds = characters
-      .map((c) => `${c.id}: ${c.name}`)
-      .join("\n");
-    const locationIds = locations
-      .map((l) => `${l.id}: ${l.name}`)
-      .join("\n");
+    const characterIds = characters.map((c) => `${c.id}: ${c.name}`).join("\n");
+    const locationIds = locations.map((l) => `${l.id}: ${l.name}`).join("\n");
 
     const data = await this.callLlm(
       "你是一位专业的小说改编剧本助手。请将小说内容拆分为剧本场景，每个场景包含 beats（动作、对白、旁白、转场）。返回 JSON 对象，包含一个 scenes 数组。输出内容使用中文。注意：对白类型的 beat 必须包含 speaker_id 字段。",

@@ -30,6 +30,18 @@ const sampleChapters: ParsedChapter[] = [
   },
 ];
 
+const fourChapters: ParsedChapter[] = [
+  ...sampleChapters,
+  {
+    id: "chapter_004",
+    order: 4,
+    title: "第四章 新的线索",
+    heading: "## 第四章 新的线索",
+    content: "林舟发现名单背后还有一条新的线索。",
+    charCount: 16,
+  },
+];
+
 describe("runPipeline with MockProvider", () => {
   const provider = new MockProvider();
 
@@ -57,6 +69,34 @@ describe("runPipeline with MockProvider", () => {
     ]);
   });
 
+  it("emits real start and done events for every pipeline step", async () => {
+    const events: string[] = [];
+
+    await runPipeline(provider, sampleChapters, "测试作品", {
+      onStepStart(step) {
+        events.push(`start:${step.step}`);
+      },
+      onStepDone(step) {
+        events.push(`done:${step.step}:${step.status}`);
+      },
+    });
+
+    expect(events).toEqual([
+      "start:summarize",
+      "done:summarize:completed",
+      "start:extract_characters",
+      "done:extract_characters:completed",
+      "start:extract_locations",
+      "done:extract_locations:completed",
+      "start:plot_summary",
+      "done:plot_summary:completed",
+      "start:split_scenes",
+      "done:split_scenes:completed",
+      "start:adaptation_notes",
+      "done:adaptation_notes:completed",
+    ]);
+  });
+
   it("all steps complete without error", async () => {
     const result = await runPipeline(provider, sampleChapters);
 
@@ -72,9 +112,7 @@ describe("runPipeline with MockProvider", () => {
 
     expect(result.draft.source.chapters).toHaveLength(3);
     expect(result.draft.source.chapters[0].id).toBe("chapter_001");
-    expect(result.draft.source.chapters[0].title).toBe(
-      "第一章 雨中的包裹",
-    );
+    expect(result.draft.source.chapters[0].title).toBe("第一章 雨中的包裹");
   });
 
   it("produces at least one character", async () => {
@@ -100,5 +138,44 @@ describe("runPipeline with MockProvider", () => {
 
     expect(result.draft.adaptation_notes).toBeDefined();
     expect(result.draft.adaptation_notes!.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("covers every input chapter when more than three chapters are provided", async () => {
+    const result = await runPipeline(provider, fourChapters);
+    const coveredChapterIds = new Set(
+      result.draft.scenes.flatMap((scene) => scene.chapter_source),
+    );
+
+    expect(result.draft.source.chapter_count).toBe(4);
+    expect(result.draft.scenes).toHaveLength(4);
+    expect(coveredChapterIds).toEqual(
+      new Set(["chapter_001", "chapter_002", "chapter_003", "chapter_004"]),
+    );
+  });
+
+  it("drops null related_scene_id values returned by LLM providers", async () => {
+    class ProviderWithNullNote extends MockProvider {
+      async generateAdaptationNotes() {
+        return [
+          {
+            type: "uncertainty",
+            content: "模型未能确认关联场景。",
+            related_scene_id: null,
+          },
+        ] as never;
+      }
+    }
+
+    const result = await runPipeline(
+      new ProviderWithNullNote(),
+      sampleChapters,
+    );
+
+    expect(result.draft.adaptation_notes).toEqual([
+      {
+        type: "uncertainty",
+        content: "模型未能确认关联场景。",
+      },
+    ]);
   });
 });

@@ -22,10 +22,10 @@
 ## 当前开发状态
 
 - 当前阶段：阶段 8：README、视频和最终提交
-- 当前状态：待开始
-- 上一阶段：阶段 7：示例数据与可复现 Demo，已完成（PR 待合并）
-- 下一步入口：补充 Demo 视频链接，完善 README，公开仓库
-- 下一步建议分支：`docs/final-submission`
+- 当前状态：优化 Demo 验收体验中
+- 上一阶段：阶段 7：示例数据与可复现 Demo，已完成
+- 下一步入口：完善 README、补充 Demo 视频链接，按竞赛时间公开仓库
+- 当前工作分支：`feat/streaming-workbench-feedback`
 
 ## 竞赛硬约束
 
@@ -121,7 +121,6 @@
 - 不要引入第三方依赖后忘记更新 README。
 - 不要复用历史代码却不在 PR 描述中说明来源。
 
-
 ## 当前目录说明
 
 ```text
@@ -132,9 +131,9 @@
 ├── CLAUDE.md        # Claude/AI agent 使用的项目说明与竞赛硬约束
 ├── AGENTS.md        # 通用 AI agent 使用的项目说明与竞赛硬约束
 ├── src/
-│   ├── app/          # Next.js App Router 页面和 API route
+│   ├── app/          # Next.js App Router 页面和 API route，含流式生成接口
 │   ├── components/   # 基础工作台 UI 组件
-│   └── lib/          # 阶段 2 基础逻辑
+│   └── lib/          # 章节解析、AI Pipeline、校验和评分逻辑
 ├── schemas/
 │   └── script.schema.json       # 剧本 YAML 输出契约，对应赛题 Schema 要求
 ├── examples/
@@ -145,6 +144,7 @@
     ├── 项目状态.md              # 当前阶段、阶段验收项和状态维护规则
     ├── 竞赛文档.md              # 赛题信息、评审规则、提交要求和硬约束整理
     ├── 输出与Agent评估标准.md   # 输出质量、Agent 能力和 Demo 验收评估标准
+    ├── 成熟剧本格式调研.md      # 成熟剧本元素调研与 YAML Schema 改进建议
     ├── 开发计划.md              # 分阶段开发计划、验收标准和注意事项
     └── 技术选型.md              # 项目形态、技术栈、目录结构和选型理由
 ```

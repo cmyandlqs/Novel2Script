@@ -96,16 +96,31 @@ Body three.`);
     expect(result.chapters).toHaveLength(3);
   });
 
-  it("returns validation error when fewer than three chapters are found", () => {
+  it("accepts fewer than three recognized chapters for draft generation", () => {
     const result = parseChapters(`## 第一章 开端
 正文一。
 
 ## 第二章 推进
 正文二。`);
 
-    expect(result.isValid).toBe(false);
-    expect(result.errors).toEqual([
-      "当前仅识别到 2 个章节，至少需要 3 个章节。",
+    expect(result.isValid).toBe(true);
+    expect(result.chapters).toHaveLength(2);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("treats plain text without headings as one chapter", () => {
+    const result = parseChapters("这是一段没有章节标题的小说文本。");
+
+    expect(result.isValid).toBe(true);
+    expect(result.chapters).toEqual([
+      {
+        id: "chapter_001",
+        order: 1,
+        title: "未命名章节",
+        heading: "",
+        content: "这是一段没有章节标题的小说文本。",
+        charCount: 16,
+      },
     ]);
   });
 });
@@ -115,7 +130,7 @@ describe("validateChapterInput", () => {
     expect(validateChapterInput("")).toEqual({
       isValid: false,
       chapterCount: 0,
-      errors: ["当前仅识别到 0 个章节，至少需要 3 个章节。"],
+      errors: ["请先输入至少 1 个章节或一段小说文本。"],
     });
   });
 });
