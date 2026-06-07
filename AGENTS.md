@@ -22,10 +22,10 @@
 ## 当前开发状态
 
 - 当前阶段：阶段 8：README、视频和最终提交
-- 当前状态：优化 Demo 验收体验中
+- 当前状态：最终提交准备中，Demo 体验优化已完成（PR #15）
 - 上一阶段：阶段 7：示例数据与可复现 Demo，已完成
-- 下一步入口：完善 README、补充 Demo 视频链接，按竞赛时间公开仓库
-- 当前工作分支：`feat/streaming-workbench-feedback`
+- 下一步入口：补充 Demo 视频链接，最终检查 README，按竞赛时间公开仓库
+- 最近合并 PR：#15 `feat: add streaming workbench feedback`
 
 ## 竞赛硬约束
 
