@@ -11,8 +11,8 @@
 ## 仓库信息
 
 - GitHub 仓库：https://github.com/cmyandlqs/Novel2Script
-- 当前可见性：`PRIVATE`
-- 可见性规则：开发阶段保持私有；等竞赛规定的公开时间或提交截止后，再切换为公开以供评审访问。
+- 当前可见性：`PUBLIC`
+- 可见性规则：竞赛允许公开后已切换为 public，供评审无需登录访问。
 - 远程名：`origin`
 - 远程地址：`git@github.com:cmyandlqs/Novel2Script.git`
 - 主分支：`main`
