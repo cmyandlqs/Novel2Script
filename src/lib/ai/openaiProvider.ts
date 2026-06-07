@@ -110,8 +110,8 @@ export class OpenAIProvider implements GenerationProvider {
     const locationIds = locations.map((l) => `${l.id}: ${l.name}`).join("\n");
 
     const data = await this.callLlm(
-      "你是一位专业的小说改编剧本助手。请将小说内容拆分为剧本场景，每个场景包含 beats（动作、对白、旁白、转场）。返回 JSON 对象，包含一个 scenes 数组。输出内容使用中文。注意：对白类型的 beat 必须包含 speaker_id 字段。",
-      `以下是小说章节：\n\n${formatChapters(chapters)}\n\n可用人物 ID：\n${characterIds}\n\n可用地点 ID：\n${locationIds}\n\n请将故事拆分为 3-6 个场景。每个场景包含：\n- id："scene_NNN" 格式\n- title：场景标题\n- chapter_source：来源章节 ID 数组\n- location_id：使用的地点 ID\n- time_of_day：时间段（如"深夜"、"清晨"、"白天"）\n- characters：出场人物 ID 数组\n- summary：1-2 句场景摘要\n- dramatic_purpose：场景的戏剧作用\n- beats：剧本节拍数组，每个 beat 包含 type（action/dialogue/narration/transition）、content、speaker_id（dialogue 类型必填）\n\n返回格式：{"scenes": [{"id": "scene_001", "title": "...", "chapter_source": ["chapter_001"], "location_id": "location_001", "time_of_day": "深夜", "characters": ["character_001"], "summary": "...", "dramatic_purpose": "...", "beats": [{"type": "action", "content": "..."}, {"type": "dialogue", "content": "...", "speaker_id": "character_001"}]}]}`,
+      "你是一位专业的小说改编剧本助手。请将小说内容拆分为剧本场景，每个场景包含 beats（动作、对白、旁白、转场）。返回 JSON 对象，包含一个 scenes 数组。输出内容使用中文。注意：对白类型的 beat 必须包含 speaker_id 字段，每个场景的 characters 数组必须至少包含 1 个可用人物 ID，不能返回空数组。",
+      `以下是小说章节：\n\n${formatChapters(chapters)}\n\n可用人物 ID：\n${characterIds}\n\n可用地点 ID：\n${locationIds}\n\n请将故事拆分为 3-6 个场景。每个场景包含：\n- id："scene_NNN" 格式\n- title：场景标题\n- chapter_source：来源章节 ID 数组\n- location_id：使用的地点 ID\n- time_of_day：时间段（如"深夜"、"清晨"、"白天"）\n- characters：出场人物 ID 数组，必须至少包含 1 个可用人物 ID；如果场景中没有明确对白人物，请使用主角或最相关人物 ID\n- summary：1-2 句场景摘要\n- dramatic_purpose：场景的戏剧作用\n- beats：剧本节拍数组，每个 beat 包含 type（action/dialogue/narration/transition）、content、speaker_id（dialogue 类型必填）\n\n返回格式：{"scenes": [{"id": "scene_001", "title": "...", "chapter_source": ["chapter_001"], "location_id": "location_001", "time_of_day": "深夜", "characters": ["character_001"], "summary": "...", "dramatic_purpose": "...", "beats": [{"type": "action", "content": "..."}, {"type": "dialogue", "content": "...", "speaker_id": "character_001"}]}]}`,
     );
 
     const result = data as { scenes: ScriptScene[] };

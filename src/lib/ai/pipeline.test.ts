@@ -178,4 +178,38 @@ describe("runPipeline with MockProvider", () => {
       },
     ]);
   });
+
+  it("fills empty scene characters with dialogue speakers or fallback character", async () => {
+    class ProviderWithEmptySceneCharacters extends MockProvider {
+      async splitScenes(
+        chapters: ParsedChapter[],
+        characters: Awaited<ReturnType<MockProvider["extractCharacters"]>>,
+        locations: Awaited<ReturnType<MockProvider["extractLocations"]>>,
+      ) {
+        const scenes = await super.splitScenes(chapters, characters, locations);
+        return scenes.map((scene, index) => ({
+          ...scene,
+          characters: [],
+          beats:
+            index === 0
+              ? [
+                  {
+                    type: "dialogue" as const,
+                    content: "我会继续查下去。",
+                    speaker_id: "character_002",
+                  },
+                ]
+              : scene.beats,
+        }));
+      }
+    }
+
+    const result = await runPipeline(
+      new ProviderWithEmptySceneCharacters(),
+      sampleChapters,
+    );
+
+    expect(result.draft.scenes[0].characters).toEqual(["character_002"]);
+    expect(result.draft.scenes[1].characters).toEqual(["character_001"]);
+  });
 });
