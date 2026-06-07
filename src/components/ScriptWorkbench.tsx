@@ -679,6 +679,22 @@ export function ScriptWorkbench() {
               />
             </label>
             <button
+              className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-[var(--surface-alt)] ${
+                hasApiConfig
+                  ? "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]"
+                  : "border-[var(--border)] bg-[var(--surface)]"
+              }`}
+              onClick={() => {
+                loadApiConfig();
+                setShowApiConfig(true);
+              }}
+              title="大模型 API 配置"
+              type="button"
+            >
+              <Settings2 className="h-4 w-4" />
+              {hasApiConfig ? "模型已配置" : "模型设置"}
+            </button>
+            <button
               className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-55"
               disabled={!chapterReady || isLoading}
               onClick={generateDraft}
