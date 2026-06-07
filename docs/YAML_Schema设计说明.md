@@ -4,7 +4,7 @@
 
 本项目的竞赛硬约束要求输出 YAML 格式的结构化剧本，并额外提交 YAML Schema 定义文档，说明 Schema 的设计原因。
 
-本文说明 `schemas/script.schema.json` 的第一版设计。该 Schema 用于约束由 3 个章节以上小说文本改编得到的 YAML 剧本初稿，目标是让输出可解析、可校验、可编辑、可导出，并能支持后续质量评分和 Demo 展示。
+本文说明 `schemas/script.schema.json` 的第一版设计。该 Schema 用于约束由 1 个及以上章节小说文本改编得到的 YAML 剧本初稿，目标是让输出可解析、可校验、可编辑、可导出，并能支持后续质量评分和 Demo 展示。竞赛最终 Demo 应使用 3 个章节以上的样例来证明赛题要求的多章节处理能力。
 
 ## 文件位置
 
@@ -20,12 +20,12 @@ examples/output-script.yaml     # 符合 Schema 的 YAML 剧本输出样例
 
 Schema 明确要求：
 
-- `source.chapter_count` 不少于 3。
-- `source.chapters` 不少于 3 个章节。
+- `source.chapter_count` 不少于 1。
+- `source.chapters` 不少于 1 个章节。
 - 输出主体必须包含 `characters`、`locations`、`plot_summary` 和 `scenes`。
 - `scenes` 必须包含剧本内容 `beats`。
 
-这样可以把“支持 3 个章节以上小说输入”和“输出结构化剧本”从文字要求落到可校验结构。
+这样可以把“输出结构化剧本”从文字要求落到可校验结构。赛题要求的 3 个章节以上能力不作为 Schema 硬门槛，而是在质量评分和 Demo 验收中单独检查，避免产品在 1-2 章试用场景下无法生成合法 YAML。
 
 ### 2. 保持剧本初稿可编辑
 
@@ -106,11 +106,11 @@ Schema 统一使用形如 `character_001`、`scene_001`、`chapter_001` 的 ID�
 
 核心字段：
 
-- `chapter_count`：章节数量，最小值为 3。
-- `chapters`：章节数组，最少 3 个。
+- `chapter_count`：章节数量，最小值为 1。
+- `chapters`：章节数组，最少 1 个。
 - `overall_summary`：整体小说摘要。
 
-该结构支撑输入合规性和章节覆盖率评估。
+该结构支撑输入结构合法性、竞赛合规性和章节覆盖率评估。
 
 ### characters
 
@@ -206,7 +206,7 @@ beats 让剧本内容可以逐条编辑，而不是只能修改整段文本。
 
 ## 示例说明
 
-`examples/sample-novel.md` 是原创 3 章节小说样例，满足赛题输入规模要求。
+`examples/sample-novel.md` 是原创 3 章节小说样例，满足赛题最终 Demo 输入规模要求。
 
 `examples/output-script.yaml` 是该小说对应的剧本 YAML 示例，覆盖：
 

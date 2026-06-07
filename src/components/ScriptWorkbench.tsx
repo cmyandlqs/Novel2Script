@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clipboard,
   Download,
+  FileUp,
   FileText,
   Loader2,
   Play,
@@ -14,7 +15,12 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { parseChapters } from "@/lib/chapters/parseChapters";
-import type { PipelineResult, ScriptDraft } from "@/lib/ai/types";
+import type {
+  PipelineResult,
+  PipelineStepName,
+  PipelineStepResult,
+  ScriptDraft,
+} from "@/lib/ai/types";
 import type { DraftValidationResult } from "@/lib/validation/validateDraft";
 import type { QualityScore } from "@/lib/validation/scoreDraft";
 import YAML from "yaml";
@@ -33,10 +39,41 @@ const fallbackNovel = `# 《雨夜档案》
 
 林舟和许澄按照照片上的路牌，在雨后的城市边缘找到一座废弃钟楼。`;
 
+const generationStepList: { step: PipelineStepName; label: string }[] = [
+  { step: "summarize", label: "章节摘要" },
+  { step: "extract_characters", label: "人物抽取" },
+  { step: "extract_locations", label: "地点抽取" },
+  { step: "plot_summary", label: "剧情梗概" },
+  { step: "split_scenes", label: "场景拆分" },
+  { step: "adaptation_notes", label: "改编说明" },
+];
+
+type GenerationStepView = {
+  step: PipelineStepName;
+  label: string;
+  status: "pending" | "running" | "completed" | "error";
+  duration_ms?: number;
+  error?: string;
+};
+
+type StreamCompletePayload = PipelineResult & {
+  scriptYaml: string;
+  validation: DraftValidationResult;
+  qualityScore: QualityScore | null;
+};
+
+function createInitialGenerationSteps(): GenerationStepView[] {
+  return generationStepList.map((step) => ({
+    ...step,
+    status: "pending",
+  }));
+}
+
 export function ScriptWorkbench() {
   const [novelText, setNovelText] = useState(fallbackNovel);
-  const [pipelineResult, setPipelineResult] =
-    useState<PipelineResult | null>(null);
+  const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(
+    null,
+  );
   const [editableDraft, setEditableDraft] = useState<ScriptDraft | null>(null);
   const [scriptYaml, setScriptYaml] = useState("");
   const [status, setStatus] = useState("就绪，点击生成初稿开始");
@@ -44,14 +81,34 @@ export function ScriptWorkbench() {
   const [validationResult, setValidationResult] =
     useState<DraftValidationResult | null>(null);
   const [qualityScore, setQualityScore] = useState<QualityScore | null>(null);
+  const [generationSteps, setGenerationSteps] = useState<GenerationStepView[]>(
+    createInitialGenerationSteps,
+  );
+  const [hasEditedSinceValidation, setHasEditedSinceValidation] =
+    useState(false);
 
   const chapterResult = useMemo(() => parseChapters(novelText), [novelText]);
   const chapters = chapterResult.chapters;
   const chapterReady = chapterResult.isValid;
 
-  function syncDraftAndYaml(draft: ScriptDraft) {
+  function syncDraftAndYaml(draft: ScriptDraft, markEdited = true) {
     setEditableDraft(draft);
     setScriptYaml(YAML.stringify(draft, { lineWidth: 0 }));
+    if (markEdited) {
+      setHasEditedSinceValidation(true);
+      setStatus("已修改，YAML 已同步，建议重新校验");
+    }
+  }
+
+  function updateGenerationStep(
+    step: PipelineStepName,
+    patch: Partial<GenerationStepView>,
+  ) {
+    setGenerationSteps((current) =>
+      current.map((item) =>
+        item.step === step ? { ...item, ...patch } : item,
+      ),
+    );
   }
 
   async function loadExample() {
@@ -73,11 +130,40 @@ export function ScriptWorkbench() {
       setEditableDraft(null);
       setValidationResult(null);
       setQualityScore(null);
+      setHasEditedSinceValidation(false);
+      setGenerationSteps(createInitialGenerationSteps());
       setStatus("已加载原创三章样例");
     } catch {
       setStatus("示例接口不可用，已保留本地兜底内容");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleNovelFileUpload(file: File | null) {
+    if (!file) return;
+
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (!["txt", "md", "markdown"].includes(extension ?? "")) {
+      setStatus(
+        "当前仅支持上传 .txt、.md、.markdown 文本文件；PDF 解析后续单独支持。",
+      );
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      setNovelText(text);
+      setPipelineResult(null);
+      setEditableDraft(null);
+      setScriptYaml("");
+      setValidationResult(null);
+      setQualityScore(null);
+      setHasEditedSinceValidation(false);
+      setGenerationSteps(createInitialGenerationSteps());
+      setStatus(`已载入文件：${file.name}`);
+    } catch {
+      setStatus("文件读取失败，请确认文件内容是可读取文本。");
     }
   }
 
@@ -94,6 +180,7 @@ export function ScriptWorkbench() {
       };
       setValidationResult(data.validation);
       setQualityScore(data.qualityScore);
+      setHasEditedSinceValidation(false);
     } catch {
       setValidationResult(null);
       setQualityScore(null);
@@ -108,41 +195,108 @@ export function ScriptWorkbench() {
     setEditableDraft(null);
     setValidationResult(null);
     setQualityScore(null);
-    setStatus("正在生成剧本初稿...");
+    setHasEditedSinceValidation(false);
+    setGenerationSteps(createInitialGenerationSteps());
+    setStatus("正在启动生成流程...");
 
     try {
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/api/generate/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ novelText }),
       });
 
-      const data = (await response.json()) as
-        | PipelineResult
-        | { error: string };
-
       if (!response.ok) {
-        const errorData = data as { error: string };
+        const errorData = (await response.json()) as { error: string };
         setStatus(`生成失败：${errorData.error}`);
         return;
       }
 
-      const result = data as PipelineResult;
-      setPipelineResult(result);
-      syncDraftAndYaml(result.draft);
-
-      const hasError = result.steps.some((s) => s.status === "error");
-      if (hasError) {
-        setStatus("部分步骤出错，请查看下方步骤详情");
-      } else {
-        setStatus("剧本初稿生成完成，正在校验...");
+      if (!response.body) {
+        throw new Error("浏览器不支持流式响应。");
       }
 
-      const yaml = YAML.stringify(result.draft, { lineWidth: 0 });
-      await runValidation(yaml);
-      setStatus("剧本初稿生成并校验完成");
-    } catch {
-      setStatus("网络错误，请检查开发服务器是否在运行。");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const handleEvent = (eventName: string, payload: unknown) => {
+        if (eventName === "pipeline_start") {
+          const data = payload as {
+            total_steps: number;
+            chapter_count: number;
+          };
+          setStatus(
+            `生成流程已启动：共 ${data.total_steps} 步，输入 ${data.chapter_count} 个章节`,
+          );
+          return;
+        }
+
+        if (eventName === "step_start") {
+          const data = payload as { step: PipelineStepName; label: string };
+          updateGenerationStep(data.step, { status: "running" });
+          setStatus(`正在执行：${data.label}`);
+          return;
+        }
+
+        if (eventName === "step_done") {
+          const data = payload as PipelineStepResult;
+          updateGenerationStep(data.step, {
+            status: data.status,
+            duration_ms: data.duration_ms,
+            error: data.error,
+          });
+          setStatus(
+            data.status === "completed"
+              ? `已完成：${data.label}`
+              : `步骤出错：${data.label}`,
+          );
+          return;
+        }
+
+        if (eventName === "complete") {
+          const data = payload as StreamCompletePayload;
+          setPipelineResult({ draft: data.draft, steps: data.steps });
+          setEditableDraft(data.draft);
+          setScriptYaml(data.scriptYaml);
+          setValidationResult(data.validation);
+          setQualityScore(data.qualityScore);
+          setHasEditedSinceValidation(false);
+          setStatus("剧本初稿生成并校验完成");
+          return;
+        }
+
+        if (eventName === "error") {
+          const data = payload as { error: string };
+          setStatus(`生成失败：${data.error}`);
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const rawEvent of events) {
+          const lines = rawEvent.split("\n");
+          const eventLine = lines.find((line) => line.startsWith("event: "));
+          const dataLine = lines.find((line) => line.startsWith("data: "));
+          if (!eventLine || !dataLine) continue;
+
+          const eventName = eventLine.slice("event: ".length);
+          const payload = JSON.parse(dataLine.slice("data: ".length));
+          handleEvent(eventName, payload);
+        }
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? `生成失败：${error.message}`
+          : "网络错误，请检查开发服务器是否在运行。",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -240,9 +394,7 @@ export function ScriptWorkbench() {
             <h1 className="text-xl font-semibold text-[var(--foreground)]">
               Noverl2Script
             </h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              剧本结构工作台
-            </p>
+            <p className="mt-1 text-sm text-[var(--muted)]">剧本结构工作台</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -257,6 +409,18 @@ export function ScriptWorkbench() {
               )}
               载入样例
             </button>
+            <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-alt)]">
+              <FileUp className="h-4 w-4" />
+              上传文本
+              <input
+                accept=".txt,.md,.markdown,text/plain,text/markdown"
+                className="sr-only"
+                onChange={(event) =>
+                  void handleNovelFileUpload(event.target.files?.[0] ?? null)
+                }
+                type="file"
+              />
+            </label>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--accent)] px-3 text-sm font-medium text-white hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-55"
               disabled={!chapterReady || isLoading}
@@ -280,7 +444,7 @@ export function ScriptWorkbench() {
           <div className="border-b border-[var(--border)] px-4 py-3">
             <h2 className="text-sm font-semibold">小说输入</h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
-              当前识别到 {chapters.length} 个章节
+              当前识别到 {chapters.length} 个章节，可直接粘贴或上传文本
             </p>
           </div>
           <textarea
@@ -311,11 +475,17 @@ export function ScriptWorkbench() {
               <div className="flex items-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4" />
                 {chapterReady
-                  ? "满足 3+ 章节输入要求"
-                  : "至少需要 3 个章节"}
+                  ? chapters.length >= 3
+                    ? "满足竞赛 Demo 3+ 章节要求"
+                    : "可生成试用初稿"
+                  : "请输入小说文本"}
               </div>
               <p className="mt-1 text-xs">
-                {chapterReady ? status : chapterResult.errors[0]}
+                {chapterReady
+                  ? chapters.length >= 3
+                    ? status
+                    : `${status}；当前少于 3 章，适合试用，最终竞赛 Demo 建议使用 3 章以上。`
+                  : chapterResult.errors[0]}
               </p>
             </div>
 
@@ -340,24 +510,42 @@ export function ScriptWorkbench() {
             </div>
 
             {/* Pipeline Steps */}
-            {pipelineResult && (
+            {(isLoading || pipelineResult) && (
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
-                  Pipeline 步骤
-                </h3>
-                {pipelineResult.steps.map((step) => (
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+                    生成流程
+                  </h3>
+                  <span className="text-xs text-[var(--muted)]">
+                    {
+                      generationSteps.filter(
+                        (step) => step.status === "completed",
+                      ).length
+                    }{" "}
+                    / {generationSteps.length}
+                  </span>
+                </div>
+                {generationSteps.map((step) => (
                   <div
                     className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2 text-sm"
                     key={step.step}
                   >
                     {step.status === "completed" ? (
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                    ) : (
+                    ) : step.status === "running" ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--accent)]" />
+                    ) : step.status === "error" ? (
                       <span className="inline-block h-4 w-4 shrink-0 rounded-full bg-red-400" />
+                    ) : (
+                      <span className="inline-block h-4 w-4 shrink-0 rounded-full border border-[var(--border)] bg-white" />
                     )}
                     <span className="font-medium">{step.label}</span>
                     <span className="ml-auto text-xs text-[var(--muted)]">
-                      {step.duration_ms}ms
+                      {step.status === "pending"
+                        ? "等待中"
+                        : step.status === "running"
+                          ? "进行中"
+                          : `${step.duration_ms ?? 0}ms`}
                     </span>
                   </div>
                 ))}
@@ -475,11 +663,7 @@ export function ScriptWorkbench() {
                             aria-label={`beat ${bi + 1}`}
                             className="flex-1 resize-none rounded border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
                             onChange={(e) =>
-                              updateBeatContent(
-                                scene.id,
-                                bi,
-                                e.target.value,
-                              )
+                              updateBeatContent(scene.id, bi, e.target.value)
                             }
                             rows={beat.content.length > 30 ? 2 : 1}
                             value={beat.content}
@@ -499,21 +683,20 @@ export function ScriptWorkbench() {
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
             <div>
               <h2 className="text-sm font-semibold">YAML 剧本输出</h2>
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                Schema v1.0.0
-              </p>
+              <p className="mt-1 text-xs text-[var(--muted)]">Schema v1.0.0</p>
             </div>
             <div className="flex gap-2">
               {editableDraft && (
                 <button
                   aria-label="重新校验"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border)] hover:bg-[var(--surface-alt)]"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] px-2 text-xs hover:bg-[var(--surface-alt)]"
                   disabled={isLoading}
                   onClick={revalidate}
                   title="重新校验"
                   type="button"
                 >
                   <RefreshCw className="h-4 w-4" />
+                  重新校验
                 </button>
               )}
               <button
@@ -542,6 +725,11 @@ export function ScriptWorkbench() {
             </pre>
 
             {/* Validation Results */}
+            {hasEditedSinceValidation && (
+              <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                已修改，YAML 已同步。请重新校验后再下载或复制最终版本。
+              </div>
+            )}
             {validationResult && (
               <div className="mt-4 space-y-3">
                 <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">

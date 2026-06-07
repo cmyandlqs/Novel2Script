@@ -24,6 +24,25 @@ const chapterHeadingPattern =
 
 export function parseChapters(input: string): ParseChaptersResult {
   const matches = Array.from(input.matchAll(chapterHeadingPattern));
+  const trimmedInput = input.trim();
+
+  if (matches.length === 0 && trimmedInput.length > 0) {
+    const chapter: ParsedChapter = {
+      id: formatChapterId(1),
+      order: 1,
+      title: "未命名章节",
+      heading: "",
+      content: trimmedInput,
+      charCount: countCharacters(trimmedInput),
+    };
+
+    return {
+      chapters: [chapter],
+      isValid: true,
+      errors: [],
+    };
+  }
+
   const chapters = matches.map((match, index): ParsedChapter => {
     const heading = (match[1] ?? "").trim();
     const title = (match[2] ?? heading.replace(/^#{1,3}\s*/, "")).trim();
@@ -42,9 +61,7 @@ export function parseChapters(input: string): ParseChaptersResult {
   });
 
   const errors =
-    chapters.length >= 3
-      ? []
-      : [`当前仅识别到 ${chapters.length} 个章节，至少需要 3 个章节。`];
+    chapters.length >= 1 ? [] : ["请先输入至少 1 个章节或一段小说文本。"];
 
   return {
     chapters,
