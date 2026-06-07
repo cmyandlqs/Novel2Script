@@ -15,13 +15,17 @@ AI 小说转剧本工具。项目面向小说作者，目标是把小说文本�
 - 多阶段生成 Pipeline（章节摘要 → 人物抽取 → 地点抽取 → 剧情梗概 → 场景拆分 → 改编说明）。
 - 真实流式生成反馈，前端能看到每个 Pipeline 步骤的开始、完成和错误状态。
 - Mock Provider（无需 API Key 即可演示）和 OpenAI 兼容 Provider。
-- 前端大模型 API 配置面板（localStorage 持久化，热切换无需重启）。
+- 前端大模型 API 配置面板（支持服务端 `.env` 状态展示和会话级运行时覆盖）。
 - 文本上传入口，支持 `.txt`、`.md`、`.markdown`，自动检测 UTF-8 / GB18030 / GBK 编码。
 - YAML 解析校验、Schema 校验（AJV）、业务规则校验（引用一致性、章节覆盖）。
 - 质量评分面板（赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
 - 可编辑剧本工作台：人物名称/描述、场景标题/摘要/时间段、beat 内容均可直接编辑，修改后 YAML 实时同步，并提示重新校验后导出。
 
-后续阶段会完善示例数据、Demo 视频和最终提交。
+Demo 视频和工作台截图已加入仓库，后续只需在竞赛规定时间公开仓库并做最终提交检查。
+
+## 工作台截图
+
+![Novel2Script 工作台截图](assets/novel2script-workbench.png)
 
 ## 快速开始
 
@@ -118,7 +122,7 @@ OPENAI_MODEL=deepseek-v4-flash
 - 章节解析模块（支持中文/英文章节标题格式）。
 - 多阶段生成 Pipeline 架构（GenerationProvider 接口 + MockProvider + OpenAIProvider）。
 - 基于 SSE 的真实流式步骤反馈。
-- 前端大模型 API 配置面板（localStorage 持久化，热切换无需重启）。
+- 前端大模型 API 配置面板（服务端模型状态展示，支持会话级 API Key 覆盖）。
 - 多编码文件上传（UTF-8 / GB18030 / GBK 自动检测）。
 - YAML 校验模块（语法校验 + Schema 校验 + 业务规则校验）。
 - 质量评分面板（5 个维度：赛题合规性、结构完整度、可编辑性、引用一致性、章节覆盖度）。
@@ -137,4 +141,4 @@ OPENAI_MODEL=deepseek-v4-flash
 
 ## Demo 视频
 
-竞赛最终提交前补充可访问 Demo 视频链接。
+- [点击查看 Demo 视频](assets/demo.mp4)
