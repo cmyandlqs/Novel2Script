@@ -131,7 +131,7 @@ OPENAI_MODEL=deepseek-v4-flash
 ## 示例输入与输出
 
 - 原创示例：[`examples/sample-novel.md`](examples/sample-novel.md) → [`examples/output-script.yaml`](examples/output-script.yaml)
-- 3+ 章节示例：[`examples/zhe-tian-chapter-1-3.md`](examples/zhe-tian-chapter-1-3.md)（辰东《遮天》前三章，仅作演示）
+- 3+ 章节示例：[`examples/zhe-tian-chapter-1-3.md`](examples/zhe-tian-chapter-1-3.md) → [`examples/zhe-tian-output.yaml`](examples/zhe-tian-output.yaml)（辰东《遮天》前三章，仅作演示）
 
 示例文件说明见 [`examples/README.md`](examples/README.md)。
 

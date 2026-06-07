@@ -5,8 +5,9 @@
 ## 文件列表
 
 - `sample-novel.md` — 原创三章节小说《雨夜档案》，用于文档与自动化测试。
-- `zhe-tian-chapter-1-3.md` — 辰东《遮天》前三章的转录文本，仅作为示例输入演示多章节解析和长文本处理能力。
 - `output-script.yaml` — 《雨夜档案》对应的 YAML 剧本输出样例，用于人工对比和 Schema 校验。
+- `zhe-tian-chapter-1-3.md` — 辰东《遮天》前三章的转录文本，仅作为示例输入演示多章节解析和长文本处理能力。
+- `zhe-tian-output.yaml` — 《遮天》前三章对应的 YAML 剧本输出样例，使用真实 LLM Provider 跑出。
 
 ## 版权与用途说明
 

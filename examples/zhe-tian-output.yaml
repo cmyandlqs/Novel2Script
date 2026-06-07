@@ -1,0 +1,214 @@
+metadata:
+  title: 遮天示例
+  schema_version: 1.0.0
+  draft_type: screenplay_draft
+  language: zh-CN
+source:
+  chapter_count: 3
+  chapters:
+    - id: chapter_001
+      title: 星空中的青铜巨棺
+      order: 1
+      summary: 旅行者二号在宇宙深处发现九具龙尸拖着一口青铜巨棺，并传回神秘数据，美国宇航局破译后震惊不已。几乎同时，国际空间站的宇航员也亲眼目睹了九龙拉棺的震撼景象，紧急呼叫地球。这一发现颠覆科学认知，留下巨大悬念。
+      key_events:
+        - 旅行者二号传回神秘数据，宇航局破译出龙尸与青铜棺的画面
+        - 国际空间站宇航员亲眼看见九具百米龙尸与青铜棺，震惊呼叫地球
+        - 宇宙中九具龙尸被铁索连向青铜棺，悬浮在太空中
+    - id: chapter_002
+      title: 素问
+      order: 2
+      summary: 叶凡在家中阅读《黄帝内经》，对上古时代心驰神往，随后接到同学林佳的电话邀约参加同学聚会。在聚会地点前，刘云志故意暗示叶凡只能打车前来，叶凡淡然处之。聚会中，昔日同学们各谈境遇，有人得意有人失落，叶凡被边缘化，但他始终保持平静，而宇宙中的九龙拉棺仍在等待进一步指示。
+      key_events:
+        - 叶凡阅读《黄帝内经》，对上古时代产生遐想
+        - 林佳打电话约叶凡同去聚会，叶凡驱车出发
+        - 刘云志以座位不够为由冷落叶凡，叶凡独自前往
+        - 同学聚会中，众人各谈境遇，有人得意有人失意
+        - 叶凡被部分同学说教，但他坦然面对
+        - 国际空间站仍在等待关于九龙拉棺的进一步指示
+characters:
+  - id: character_001
+    name: 叶凡
+    role: protagonist
+    description: 小说主角，大学毕业后留在一座城市，喜好搜奇类书籍，参加同学聚会并展现出淡然的处世态度。
+    motivation: 暂无明确动机，但表现出对上古文明的好奇。
+    arc: 从平凡生活逐步接触到宇宙神秘现象的开端。
+  - id: character_002
+    name: 林佳
+    role: supporting
+    description: 叶凡的大学同学，漂亮精明，毕业后事业顺利，在同学聚会中与刘云志走得更近。
+    motivation: 追求现实利益和社会地位。
+  - id: character_003
+    name: 刘云志
+    role: antagonist
+    description: 叶凡的大学同学兼竞争对手，毕业后靠背景和人脉事业有成，在聚会中刻意轻视叶凡。
+    motivation: 在同学面前炫耀成就，打压叶凡。
+  - id: character_004
+    name: 王子文
+    role: supporting
+    description: 同学聚会的组织者之一，事业发展顺利，为人圆滑，试图调和同学间的关系。
+    motivation: 维护自己的社交形象。
+  - id: character_005
+    name: 周毅
+    role: minor
+    description: 同学之一，被王子文提及要去接他，但未在本章中正式出场。
+  - id: character_006
+    name: 美国宇航局工作人员
+    role: minor
+    description: 负责接收旅行者二号数据的NASA工作人员，在监控室中首次发现神秘图像并震惊不已。
+  - id: character_007
+    name: 国际空间站宇航员
+    role: minor
+    description: 在空间站外亲眼目睹九龙拉棺场景的宇航员，立刻向地面呼叫报告。
+locations:
+  - id: location_001
+    name: 宇宙空间
+    description: 黑暗冰冷的太空，星辰点缀，九具龙尸与青铜巨棺悬浮，充满苍凉与震撼。可用于拍摄特效外景。
+  - id: location_002
+    name: 国际空间站
+    description: 绕地轨道上的空间站内部，仪表闪烁，宇航员失重漂浮，狭小科技感。可用于紧急通讯与观测场景。
+  - id: location_003
+    name: 美国宇航局主监控室
+    description: 地面控制中心，大型屏幕墙，工作台密集，气氛紧张。用于接收与分析神秘数据。
+  - id: location_004
+    name: 叶凡家
+    description: 带院子的住宅，书房内书桌、绿茶，窗外可见梧桐与草坪，夕阳洒落。适合阅读、思考与出发前场景。
+  - id: location_005
+    name: 百盛商场前
+    description: 城市繁华街道，路边停车位，人流车流不息，晚霞余晖。用于人物碰面与对话。
+  - id: location_006
+    name: 海上明月城门口
+    description: 超级娱乐城正门，霓虹灯璀璨，停车场车辆密集。用于迎接与入场场面。
+  - id: location_007
+    name: 海上明月城商务中心
+    description: 第五层小型会议厅，桌椅排列，配有演讲台。用于同学聚会、社交寒暄与冲突。
+plot_summary:
+  logline: 平凡青年叶凡在势利同学会上备受冷落，而宇宙中九龙拉棺的异象正悄然改变命运。
+  synopsis: 故事以宇宙中九龙拉棺的震撼景象开篇，旅行者二号与国际空间站先后发现这一神秘存在。地球上的主角叶凡研读《黄帝内经》，随后参加同学聚会，却因事业普通而遭到刘云志等人的轻视。聚会中，同学们以财富地位相互攀比，叶凡淡然处之，但内心的平静已被打破。与此同时，国际空间站将九龙拉棺的信息传回地球，宇宙神秘力量正逼近人类。两条线索预示着平凡世界即将被超自然事件颠覆，叶凡的未来将与之紧密相连。
+  central_conflict: 现实社会中以财富论成败的价值观与个人内在尊严的冲突，以及人类对未知宇宙现象的无知与潜在威胁。
+  themes:
+    - 探索未知
+    - 上古与现代
+    - 社会现实
+    - 命运转折
+scenes:
+  - id: scene_001
+    title: 宇航员目睹九龙拉棺
+    chapter_source:
+      - chapter_001
+    location_id: location_002
+    time_of_day: 深夜
+    characters:
+      - character_007
+    summary: 国际空间站宇航员在舱外作业时震惊地发现九具龙尸与青铜巨棺悬浮在宇宙中，立即呼叫地球。
+    dramatic_purpose: 建立史诗级科幻悬念，揭示超自然现象
+    beats:
+      - type: action
+        content: 宇航员透过舷窗看到冰冷的宇宙中，九具长达百米的五爪黑龙尸体悬浮，龙角晶莹，龙身乌光，尾端绑缚黑色铁索，连接一口二十米长的青铜巨棺。
+      - type: dialogue
+        content: 天哪！九龙拉棺！这怎么可能？
+        speaker_id: character_007
+      - type: action
+        content: 一名宇航员迅速冲向通讯设备，手指颤抖地按下按钮。
+      - type: dialogue
+        content: 呼叫地球！这里是国际空间站，发现不明物体……重复，发现巨型龙尸和棺材！
+        speaker_id: character_007
+  - id: scene_002
+    title: NASA监控室的震惊
+    chapter_source:
+      - chapter_001
+    location_id: location_003
+    time_of_day: 深夜
+    characters:
+      - character_006
+    summary: 美国宇航局主监控室接收到旅行者二号传回的神秘图像，画面中九龙拉棺令所有技术人员震惊。
+    dramatic_purpose: 揭示全球性神秘事件，加剧悬念
+    beats:
+      - type: action
+        content: 主监控室内，大型屏幕墙突然显示一段模糊但震撼的图像：九具龙尸悬浮在黑暗中，铁索连着一口青铜巨棺。
+      - type: dialogue
+        content: 上帝！这是什么？旅行者二号传回来的？
+        speaker_id: character_006
+      - type: action
+        content: 技术人员纷纷起立，监控室陷入一片哗然。
+      - type: dialogue
+        content: 立刻分析图像！确认这不是故障！
+        speaker_id: character_006
+      - type: action
+        content: 警报声与通话声交织，控制台前人员忙碌地操作。
+  - id: scene_003
+    title: 叶凡的闲适午后
+    chapter_source:
+      - chapter_002
+    location_id: location_004
+    time_of_day: 傍晚
+    characters:
+      - character_001
+    summary: 叶凡在家中阅读《黄帝内经》，对上古文明悠然神往，随后接电话准备赴同学聚会。
+    dramatic_purpose: 展现主角性格与生活状态，为后续剧情铺垫
+    beats:
+      - type: action
+        content: 叶凡坐在书房窗前，手捧《黄帝内经》，夕阳余晖透过梧桐树叶洒在书页上。
+      - type: narration
+        content: 他沉浸在素问篇关于上古之人的描述中，对那段被迷雾笼罩的古老文明悠然神往。
+      - type: action
+        content: 手机铃声响起，打断思绪，他拿起手机看了一眼。
+      - type: dialogue
+        content: 怎么，想我了？
+        speaker_id: character_001
+      - type: action
+        content: 简短通话后，叶凡合上书本，整理衣着准备出门。
+      - type: dialogue
+        content: 上古时代，真的存在过长生的秘密吗……
+        speaker_id: character_001
+      - type: action
+        content: 他走出房门，融入暮色。
+  - id: scene_004
+    title: 同学聚会上的暗流
+    chapter_source:
+      - chapter_003
+    location_id: location_007
+    time_of_day: 夜晚
+    characters:
+      - character_001
+      - character_002
+      - character_003
+      - character_004
+    summary: 叶凡到达海上明月城参加同学聚会，感受到昔日同学间的地位分化，并受到刘云志的轻视。
+    dramatic_purpose: 展现社会现实冲突，激化人物关系
+    beats:
+      - type: action
+        content: 商务中心内灯火通明，同学们三五成群交谈。叶凡推门而入，王子文迎上前。
+      - type: dialogue
+        content: 叶凡，你可来晚了！必须罚酒三杯！
+        speaker_id: character_004
+      - type: action
+        content: 刘云志坐在不远处，淡淡瞥了叶凡一眼，对旁边的人低语。
+      - type: dialogue
+        content: 打车过来的吧？下班高峰可不好叫车。
+        speaker_id: character_003
+      - type: action
+        content: 叶凡不以为意，与普通同学坐到一起，聊起校园往事。
+      - type: dialogue
+        content: 你现在做什么工作？还是老样子？
+        speaker_id: character_002
+      - type: dialogue
+        content: 还好。
+        speaker_id: character_001
+      - type: action
+        content: 酒过三巡，刘云志那桌成为焦点，叶凡所在桌氛围微妙，有人开始抱怨生活不如意。
+adaptation_notes:
+  - type: assumption
+    content: 场景 scene_001 将原文中宇航员在舱内通过监控看到九龙拉棺调整为“舱外作业时震惊地发现”，推测是为了增强视觉冲击力和戏剧效果，但原文并未明确说明舱外作业。
+    related_scene_id: scene_001
+  - type: uncertainty
+    content: 原文中旅行者二号传回数据（5月22日）与国际空间站目击事件（6月11日）有明确时间先后，但场景 scene_001 和 scene_002 的排列顺序可能暗示两者同时发生或顺序模糊，需要作者确认时间线是否需明示。
+    related_scene_id: scene_001
+  - type: editorial_suggestion
+    content: 场景 scene_004 简化了同学聚会中的大量对话和人物细节（如女同学的遭遇、刘云志的轻视等），建议后续打磨时适当增加台词和互动，以丰富人物性格和关系张力。
+    related_scene_id: scene_004
+  - type: schema_note
+    content: 采用 scene_001（空间站视角）和 scene_002（地面监控视角）两个场景分别呈现同一事件，是合理的多线叙事设计，有助于从不同角度构建悬念。
+    related_scene_id: scene_002
+  - type: assumption
+    content: 场景 scene_003 省略了叶凡阅读《黄帝内经》的具体内容和接电话的详细对话，仅保留“对上古悠然神往”和“接电话准备赴会”，假设观众能从后续表现中理解其性格背景。
+    related_scene_id: scene_003
